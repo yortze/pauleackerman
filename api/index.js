@@ -7,5 +7,15 @@ let appPromise;
 
 module.exports = (req, res) => {
   appPromise = appPromise || createApp();
-  return appPromise.then((app) => app(req, res));
+  return appPromise.then(
+    (app) => app(req, res),
+    (err) => {
+      // Échec d'init (ex. Mongo injoignable) : on invalide le cache pour
+      // que la prochaine requête retente au lieu de rester bloquée.
+      appPromise = null;
+      console.error("Init impossible :", err);
+      res.statusCode = 503;
+      res.end("Service momentanément indisponible");
+    }
+  );
 };
