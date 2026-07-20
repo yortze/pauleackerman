@@ -57,12 +57,10 @@
     var m;
     if ((m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{6,})/)))
       return { src: "https://www.youtube-nocookie.com/embed/" + m[1], ratio: /shorts\//.test(url) ? "9/16" : "16/9" };
-    // Ratios TikTok/Insta plus hauts que 9/16 : leur lecteur ajoute un
-    // bandeau profil + pied de page autour de la vidéo.
     if ((m = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/)))
-      return { src: "https://www.tiktok.com/embed/v2/" + m[1], ratio: "9/20" };
+      return { src: "https://www.tiktok.com/embed/v2/" + m[1], ratio: "9/16" };
     if ((m = url.match(/instagram\.com\/(?:p|reels?|tv)\/([\w-]+)/)))
-      return { src: "https://www.instagram.com/p/" + m[1] + "/embed", ratio: "9/19" };
+      return { src: "https://www.instagram.com/p/" + m[1] + "/embed", ratio: "9/16" };
     if (/facebook\.com\/.*(?:\/videos?\/|watch|reel)|fb\.watch\//.test(url))
       return { src: "https://www.facebook.com/plugins/video.php?show_text=false&href=" + encodeURIComponent(url), ratio: "9/16" };
     return null;
@@ -143,7 +141,7 @@
       : '<video controls preload="metadata" playsinline poster="' + esc(v.poster || "") + '" src="' + esc(v.video) + '">' +
         "Votre navigateur ne peut pas lire cette vidéo.</video>";
     return (
-      '<figure class="vid-item' + (wide ? " vid-wide" : "") + (emb ? " vid-embed" : "") + '">' +
+      '<figure class="vid-item' + (wide ? " vid-wide" : "") + '">' +
       media +
       "<figcaption><span class=\"gal-t\">" + esc(v.titre) + '</span><span class="gal-tag">' + esc(v.tag || "") + "</span></figcaption>" +
       "</figure>"
