@@ -14,6 +14,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+/* Applique le thème mémorisé avant le premier rendu (évite le flash) */
+try{if(localStorage.getItem("theme")==="dark")document.documentElement.dataset.theme="dark";}catch(e){}
+</script>
 <style>
 :root{
   --bg:#EAECF0;
@@ -35,6 +39,22 @@
   --serif:'Instrument Serif',serif;
   --mono:'JetBrains Mono',monospace;
 }
+/* ============ MODE SOMBRE ============ */
+html[data-theme="dark"]{
+  --bg:#0B0E15;
+  --surface:#151A26;
+  --surface-2:#1C2231;
+  --ink:#E8EAF2;
+  --ink-soft:#A3ABc0;
+  --ink-faint:#646C80;
+  --line:rgba(232,234,242,.13);
+  --line-2:rgba(232,234,242,.07);
+  --clay-2:#6E9BF5;
+  --clay-tint:#1D3260;
+}
+html[data-theme="dark"] .mob-bar{background:rgba(13,17,26,.96)}
+html[data-theme="dark"] #soundTip,html[data-theme="dark"] #themeTip{color:var(--bg)}
+html[data-theme="dark"] .vid-item:hover{box-shadow:0 12px 26px rgba(0,0,0,.5)}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -1468,6 +1488,45 @@ svg{display:block}
   }
   fetchTemp();
   setInterval(fetchTemp,15*60*1000);
+})();
+</script>
+
+<!-- ============ MODE SOMBRE ============ -->
+<button id="themeBtn" aria-label="Basculer entre mode clair et mode sombre"
+  style="position:fixed;right:18px;bottom:106px;z-index:80;
+    width:46px;height:46px;border-radius:50%;
+    background:var(--surface);border:1px solid var(--line);
+    box-shadow:0 8px 22px rgba(26,23,38,.18);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);transition:transform .18s,color .2s;">
+  <svg class="ico" id="themeIconMoon" viewBox="0 0 24 24">
+    <path d="M20 13.5A8 8 0 0 1 10.5 4a8 8 0 1 0 9.5 9.5z"/>
+  </svg>
+  <svg class="ico" id="themeIconSun" viewBox="0 0 24 24" style="display:none">
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/>
+  </svg>
+</button>
+<script>
+(function(){
+  var btn=document.getElementById("themeBtn"),
+      moon=document.getElementById("themeIconMoon"),
+      sun=document.getElementById("themeIconSun"),
+      root=document.documentElement;
+  function draw(){
+    var dark=root.dataset.theme==="dark";
+    moon.style.display=dark?"none":"block";
+    sun.style.display=dark?"block":"none";
+  }
+  btn.addEventListener("click",function(){
+    var dark=root.dataset.theme==="dark";
+    if(dark)delete root.dataset.theme;else root.dataset.theme="dark";
+    try{localStorage.setItem("theme",dark?"light":"dark");}catch(e){}
+    draw();
+    btn.style.transform="scale(.88)";
+    setTimeout(function(){btn.style.transform="";},150);
+  });
+  draw();
 })();
 </script>
 
