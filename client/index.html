@@ -629,6 +629,9 @@ svg{display:block}
   background:#06080F}
 .vid-wide{max-width:520px}
 .vid-wide video{aspect-ratio:16/9}
+/* Lecteurs intégrés (Insta, TikTok…) : pleine largeur de la grille,
+   sinon leur interface est écrasée sur mobile */
+.vid-embed{grid-column:1/-1;width:100%;max-width:420px;margin:0 auto}
 .vid-item figcaption{
   display:flex;justify-content:space-between;align-items:center;
   padding:11px 13px;gap:8px}
