@@ -1,0 +1,10 @@
+{
+  "name": "pauleackerman",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Portfolio de Paule Ackerman — site public + admin (contenu géré sans dev)",
+  "scripts": {
+    "dev": "npm --prefix server run dev",
+    "start": "npm --prefix server start"
+  }
+}

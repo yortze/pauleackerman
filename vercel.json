@@ -1,19 +1,25 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm --prefix server install",
+  "buildCommand": "",
+  "outputDirectory": "client",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ],
   "headers": [
     {
-      "source": "/(.*).mp4",
+      "source": "/media/(.*)",
       "headers": [
-        { "key": "Content-Type", "value": "video/mp4" },
-        { "key": "Accept-Ranges", "value": "bytes" },
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Accept-Ranges", "value": "bytes" }
       ]
     },
     {
-      "source": "/index.html",
+      "source": "/(index|admin).html",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }
-  ],
-  "cleanUrls": true
+  ]
 }

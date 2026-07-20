@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin — Portfolio Paule Ackerman</title>
+<link rel="icon" href="/media/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EAECF0; --surface:#fff; --surface-2:#E9EBF0;
+  --ink:#0E1116; --ink-soft:#5A6173; --line:rgba(14,17,22,.12);
+  --clay:#2D6AE0; --clay-2:#4D86F2; --brown:#141A2A; --ok:#1FA86A; --bad:#D64545;
+  --ui:'Schibsted Grotesk',sans-serif; --serif:'Instrument Serif',serif; --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--ui);background:var(--bg);color:var(--ink);font-size:15px;-webkit-font-smoothing:antialiased;min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--clay)}
+textarea{resize:vertical;min-height:74px;line-height:1.5}
+label{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin:14px 0 5px;letter-spacing:.02em}
+label .help{font-weight:400;color:var(--ink-soft);opacity:.8}
+.btn{display:inline-flex;align-items:center;gap:7px;background:var(--clay);color:#fff;font-weight:700;font-size:13.5px;border-radius:11px;padding:11px 18px;transition:filter .15s}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:var(--surface-2);color:var(--ink)}
+.btn.danger{background:#fceaea;color:var(--bad)}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+.btn:disabled{opacity:.55;cursor:wait}
+
+/* ---- connexion ---- */
+.login{max-width:380px;margin:14vh auto 0;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:34px 30px;box-shadow:0 20px 50px rgba(14,17,22,.10)}
+.login h1{font-family:var(--serif);font-size:28px;font-weight:400;margin-bottom:4px}
+.login p{font-size:13px;color:var(--ink-soft);margin-bottom:18px}
+.err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px}
+
+/* ---- coquille ---- */
+header.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:12px 18px}
+header.top .t{font-family:var(--serif);font-size:20px}
+header.top .sub{font-size:11.5px;color:var(--ink-soft);font-family:var(--mono)}
+header.top .sp{flex:1}
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding:12px 14px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--ink-soft)}
+nav.tabs button.on{background:var(--brown);border-color:var(--brown);color:#fff}
+nav.tabs button .n{font-family:var(--mono);font-size:10.5px;opacity:.7;margin-left:4px}
+main{max-width:860px;margin:0 auto;padding:6px 14px 90px}
+
+/* ---- listes ---- */
+.bar{display:flex;align-items:center;gap:10px;margin:14px 0}
+.bar h2{font-family:var(--serif);font-size:23px;font-weight:400;flex:1}
+.hint{font-size:12.5px;color:var(--ink-soft);background:var(--surface-2);border-radius:10px;padding:10px 13px;margin-bottom:14px;line-height:1.5}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px 15px;margin-bottom:10px;display:flex;gap:13px;align-items:center}
+.card .thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--surface-2);flex:0 0 auto}
+.card .thumb.txt{display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:22px;color:var(--ink-soft)}
+.card .cbody{flex:1;min-width:0}
+.card .ct{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .cs{font-size:12px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.card .acts{display:flex;gap:5px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.icobtn{width:34px;height:34px;border-radius:9px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:15px}
+.icobtn:hover{background:var(--line)}
+.icobtn.danger{color:var(--bad)}
+.badge{font-family:var(--mono);font-size:10px;background:var(--surface-2);border-radius:6px;padding:2px 7px;margin-left:6px;color:var(--ink-soft)}
+.badge.new{background:var(--clay);color:#fff}
+
+/* ---- formulaire ---- */
+.form{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 20px 24px;margin-bottom:16px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media(max-width:640px){.row2{grid-template-columns:1fr}}
+.check{display:flex;align-items:center;gap:9px;margin-top:16px;font-size:14px;font-weight:600}
+.check input{width:18px;height:18px;accent-color:var(--clay)}
+.media-field{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.media-field img,.media-field video{width:86px;height:86px;object-fit:cover;border-radius:11px;border:1px solid var(--line);background:var(--surface-2)}
+.media-empty{width:86px;height:86px;border-radius:11px;border:1.5px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:22px}
+.subrow{border:1px solid var(--line);border-radius:12px;padding:4px 13px 13px;margin-bottom:9px;position:relative;background:var(--bg)}
+.subrow .rm{position:absolute;top:8px;right:8px}
+.formfoot{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.savemsg{font-size:13px;font-weight:600;align-self:center}
+.savemsg.ok{color:var(--ok)}.savemsg.bad{color:var(--bad)}
+
+/* ---- messages ---- */
+.msg{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:15px 17px;margin-bottom:10px}
+.msg.unread{border-left:4px solid var(--clay)}
+.msg .mh{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.msg .mn{font-weight:800}
+.msg .me{font-size:12.5px;color:var(--clay);word-break:break-all}
+.msg .md{font-size:11px;color:var(--ink-soft);font-family:var(--mono);margin-left:auto}
+.msg .mt{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.msg .macts{display:flex;gap:8px;margin-top:10px}
+.empty{text-align:center;color:var(--ink-soft);padding:40px 0;font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- ============ CONNEXION ============ -->
+<div id="loginView" class="login" hidden>
+  <h1>Espace de Paule</h1>
+  <p>Entrez votre mot de passe pour gérer le contenu du portfolio.</p>
+  <input id="pw" type="password" placeholder="Mot de passe" autocomplete="current-password">
+  <div class="err" id="loginErr"></div>
+  <button class="btn" id="loginBtn" style="width:100%;justify-content:center;margin-top:4px">Se connecter</button>
+</div>
+
+<!-- ============ APPLICATION ============ -->
+<div id="appView" hidden>
+  <header class="top">
+    <div>
+      <div class="t">Portfolio de Paule — admin</div>
+      <div class="sub">ce que vous modifiez ici apparaît sur le site</div>
+    </div>
+    <div class="sp"></div>
+    <a class="btn ghost sm" href="/" target="_blank" rel="noopener">Voir le site ↗</a>
+    <button class="btn ghost sm" id="logoutBtn">Sortir</button>
+  </header>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="panel"></main>
+</div>
+
+<script>
+/* ================================================================
+   Utilitaires
+================================================================ */
+var TOKEN = localStorage.getItem("paule_token") || "";
+function $(s, r) { return (r || document).querySelector(s); }
+function el(html) { var d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; }
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers);
+  if (TOKEN) opts.headers["Authorization"] = "Bearer " + TOKEN;
+  if (opts.body && !(opts.body instanceof FormData)) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(opts.body);
+  }
+  return fetch(path, opts).then(function (r) {
+    if (r.status === 401 && path !== "/api/auth/login") { logout(); throw new Error("Session expirée — reconnectez-vous"); }
+    return r.json().catch(function () { return {}; }).then(function (d) {
+      if (!r.ok) throw new Error(d.erreur || "Erreur " + r.status);
+      return d;
+    });
+  });
+}
+
+function uploadFile(file) {
+  var fd = new FormData();
+  fd.append("file", file);
+  return api("/api/media", { method: "POST", body: fd }).then(function (d) { return d.url; });
+}
+
+/* ================================================================
+   Connexion
+================================================================ */
+function logout() {
+  TOKEN = ""; localStorage.removeItem("paule_token");
+  $("#appView").hidden = true; $("#loginView").hidden = false;
+}
+$("#loginBtn").addEventListener("click", doLogin);
+$("#pw").addEventListener("keydown", function (e) { if (e.key === "Enter") doLogin(); });
+function doLogin() {
+  $("#loginErr").textContent = "";
+  api("/api/auth/login", { method: "POST", body: { password: $("#pw").value } })
+    .then(function (d) {
+      TOKEN = d.token; localStorage.setItem("paule_token", TOKEN);
+      $("#pw").value = "";
+      enter();
+    })
+    .catch(function (e) { $("#loginErr").textContent = e.message; });
+}
+$("#logoutBtn").addEventListener("click", logout);
+
+/* ================================================================
+   Schémas des contenus — pilote les formulaires
+   types de champ : text, textarea, check, select, tags, media,
+                    medialist, textlist, list (sous-objets)
+================================================================ */
+var MEDIA_HELP = "importez un fichier (10 Mo max) ou collez un lien";
+
+var SCHEMAS = {
+  posts: {
+    label: "Publications", labelUn: "publication",
+    aide: "Le fil d'accueil du site, comme sur Instagram. La première de la liste apparaît en haut. « Épinglé » affiche le petit badge.",
+    resume: function (d) { return (d.texteGras || d.texte || "(sans texte)").slice(0, 80); },
+    sousTitre: function (d) { return (d.type || "photo") + (d.tag ? " · " + d.tag : ""); },
+    vignette: function (d) { return (d.images && d.images[0]) || d.poster || null; },
+    champs: [
+      { k: "type", label: "Type de publication", type: "select", opts: [["photo", "Photo(s)"], ["video", "Vidéo"], ["texte", "Texte seul"], ["partage", "Partage (certification…)"]] },
+      { k: "date", label: "Date affichée", type: "text", help: "texte libre : « il y a 2 j », « juin 2026 »…" },
+      { k: "epingle", label: "Épingler en haut du feed", type: "check" },
+      { k: "tag", label: "Étiquette sur la photo", type: "text", help: "ex : Projet client · décoration", showIf: ["photo", "video"] },
+      { k: "images", label: "Photo(s)", type: "medialist", showIf: ["photo"], help: "plusieurs photos = carrousel" },
+      { k: "alt", label: "Description de l'image (accessibilité)", type: "text", showIf: ["photo"] },
+      { k: "video", label: "Vidéo", type: "media", accept: "video/*", showIf: ["video"] },
+      { k: "poster", label: "Image de couverture de la vidéo", type: "media", showIf: ["video"] },
+      { k: "texteGras", label: "Début du texte (en gras)", type: "text", showIf: ["photo", "video"] },
+      { k: "texte", label: "Suite du texte", type: "textarea" },
+      { k: "chips", label: "Petites étiquettes sous le texte", type: "tags", help: "séparez par des virgules", showIf: ["photo", "video"] },
+      { k: "partageDe", label: "Partagé depuis (nom)", type: "text", showIf: ["partage"] },
+      { k: "partageInitiale", label: "Initiale affichée", type: "text", showIf: ["partage"] },
+      { k: "partageSous", label: "Sous-titre", type: "text", showIf: ["partage"], help: "ex : Certification obtenue" },
+      { k: "partageTexte", label: "Texte du partage", type: "textarea", showIf: ["partage"] },
+    ],
+  },
+  creations: {
+    label: "Créations", labelUn: "création",
+    aide: "La galerie de visuels (onglet « Créations » du site). Une image + un titre + une étiquette.",
+    resume: function (d) { return d.titre || "(sans titre)"; },
+    sousTitre: function (d) { return d.tag || ""; },
+    vignette: function (d) { return d.image; },
+    champs: [
+      { k: "image", label: "Image", type: "media" },
+      { k: "titre", label: "Titre", type: "text" },
+      { k: "tag", label: "Étiquette", type: "select", opts: [["client", "client"], ["perso", "perso"], ["exercice", "exercice"]] },
+    ],
+  },
+  videos: {
+    label: "Vidéos", labelUn: "vidéo",
+    aide: "Les montages vidéo de l'onglet « Créations ». Section « client » = grille du haut, « perso » = grand format en bas.",
+    resume: function (d) { return d.titre || "(sans titre)"; },
+    sousTitre: function (d) { return (d.section || "client") + " · " + (d.tag || ""); },
+    vignette: function (d) { return d.poster; },
+    champs: [
+      { k: "video", label: "Vidéo", type: "media", accept: "video/*" },
+      { k: "poster", label: "Image de couverture", type: "media" },
+      { k: "titre", label: "Titre", type: "text" },
+      { k: "tag", label: "Étiquette", type: "select", opts: [["client", "client"], ["perso", "perso"], ["exercice", "exercice"]] },
+      { k: "section", label: "Section", type: "select", opts: [["client", "Grille (vidéos client)"], ["perso", "Grand format (projet perso)"]] },
+    ],
+  },
+  etudes: {
+    label: "Études de cas", labelUn: "étude de cas",
+    aide: "Les dossiers détaillés. « Pleine largeur » = carte large avec galerie possible (comme Les Retrouvailles).",
+    resume: function (d) { return d.titre || "(sans titre)"; },
+    sousTitre: function (d) { return (d.meta || []).join(" · "); },
+    vignette: function (d) { return d.image; },
+    champs: [
+      { k: "image", label: "Image principale", type: "media" },
+      { k: "titre", label: "Titre", type: "text" },
+      { k: "meta", label: "Trois infos courtes", type: "textlist", help: "ex : secteur, ville, période" },
+      { k: "texte", label: "Texte du dossier", type: "textarea" },
+      { k: "chips", label: "Petites étiquettes", type: "tags", help: "séparez par des virgules" },
+      { k: "large", label: "Carte pleine largeur", type: "check" },
+      { k: "galerie", label: "Galerie (facultatif)", type: "list", sub: [
+        { k: "image", label: "Image", type: "media" },
+        { k: "legende", label: "Légende", type: "text" },
+      ] },
+    ],
+  },
+  registre: {
+    label: "Registre", labelUn: "ligne du registre",
+    aide: "La liste des marques accompagnées.",
+    resume: function (d) { return d.nom || "(sans nom)"; },
+    sousTitre: function (d) { return (d.detail || "") + " · " + (d.periode || ""); },
+    vignette: function () { return null; },
+    champs: [
+      { k: "initiale", label: "Initiale affichée", type: "text" },
+      { k: "nom", label: "Nom de la marque", type: "text" },
+      { k: "badge", label: "Badge (facultatif)", type: "text", help: "ex : en cours" },
+      { k: "detail", label: "Description", type: "text" },
+      { k: "periode", label: "Période", type: "text" },
+    ],
+  },
+};
+
+var PROFILE_SCHEMA = {
+  label: "Profil",
+  aide: "La carte de profil, la photo, les contacts et les réseaux — visibles partout sur le site.",
+  champs: [
+    { k: "photo", label: "Photo de profil", type: "media" },
+    { k: "nom", label: "Nom affiché", type: "text" },
+    { k: "handle", label: "Pseudo", type: "text", help: "ex : @paule_ackerman" },
+    { k: "titre", label: "Titre du profil", type: "text" },
+    { k: "bioAccroche", label: "Accroche de la bio (en italique)", type: "text" },
+    { k: "bio", label: "Suite de la bio", type: "textarea" },
+    { k: "localisation", label: "Ville", type: "text" },
+    { k: "telephone", label: "Téléphone", type: "text" },
+    { k: "email", label: "Email (reçoit aussi le lien « par mail » du site)", type: "text" },
+    { k: "stats", label: "Les 3 chiffres du profil", type: "list", sub: [
+      { k: "valeur", label: "Chiffre", type: "text" },
+      { k: "label", label: "Libellé", type: "text" },
+    ] },
+    { k: "disponibilite", label: "Statut affiché (« Actuellement »)", type: "text" },
+    { k: "accrocheContact", label: "Texte de la carte « Un projet en tête ? »", type: "textarea" },
+    { k: "dmBienvenue", label: "Message d'accueil de la messagerie", type: "textarea" },
+    { k: "dmReponse", label: "Réponse automatique après un message", type: "textarea" },
+    { k: "reseaux", label: "Réseaux sociaux", type: "list", sub: [
+      { k: "nom", label: "Réseau", type: "text" },
+      { k: "detail", label: "Pseudo affiché", type: "text" },
+      { k: "url", label: "Lien", type: "text" },
+    ] },
+    { k: "certifsCote", label: "Certifications (colonne de droite)", type: "list", sub: [
+      { k: "titre", label: "Titre", type: "text" },
+      { k: "org", label: "Organisme · année", type: "text" },
+      { k: "initiale", label: "Initiale", type: "text" },
+    ] },
+  ],
+};
+
+var APROPOS_SCHEMA = {
+  label: "À propos",
+  aide: "Tout l'onglet « À propos » : présentation, parcours, services, outils, langues, certifications, atouts.",
+  champs: [
+    { k: "introTitre", label: "Titre de présentation", type: "text" },
+    { k: "introLead", label: "Phrase d'accroche", type: "text" },
+    { k: "introParagraphes", label: "Paragraphes de présentation", type: "textlist" },
+    { k: "parcours", label: "Parcours", type: "list", sub: [
+      { k: "annee", label: "Année", type: "text" },
+      { k: "titre", label: "Intitulé", type: "text" },
+      { k: "detail", label: "Détail", type: "text" },
+    ] },
+    { k: "services", label: "Ce que je fais", type: "list", sub: [
+      { k: "titre", label: "Service", type: "text" },
+      { k: "detail", label: "Description", type: "text" },
+    ] },
+    { k: "outilsMaitrise", label: "Outils maîtrisés", type: "tags", help: "séparez par des virgules" },
+    { k: "outilsApprentissage", label: "Outils en apprentissage", type: "tags", help: "séparez par des virgules" },
+    { k: "langues", label: "Langues", type: "list", sub: [
+      { k: "nom", label: "Langue", type: "text" },
+      { k: "niveau", label: "Mise en avant", type: "select", opts: [["key", "Mise en avant (bleu)"], ["", "Normale"]] },
+    ] },
+    { k: "certifications", label: "Certifications & formations", type: "list", sub: [
+      { k: "annee", label: "Année", type: "text" },
+      { k: "titre", label: "Intitulé", type: "text" },
+      { k: "detail", label: "Détail", type: "text" },
+    ] },
+    { k: "atouts", label: "Mes atouts", type: "tags", help: "séparez par des virgules" },
+  ],
+};
+
+/* ================================================================
+   Onglets
+================================================================ */
+var TABS = [
+  { id: "posts", label: "Publications" },
+  { id: "creations", label: "Créations" },
+  { id: "videos", label: "Vidéos" },
+  { id: "etudes", label: "Études" },
+  { id: "registre", label: "Registre" },
+  { id: "profile", label: "Profil" },
+  { id: "apropos", label: "À propos" },
+  { id: "messages", label: "Messages" },
+  { id: "reglages", label: "Réglages" },
+];
+var currentTab = "posts";
+
+function enter() {
+  $("#loginView").hidden = true;
+  $("#appView").hidden = false;
+  drawTabs();
+  openTab(currentTab);
+  refreshMsgCount();
+}
+
+function drawTabs() {
+  var nav = $("#tabs");
+  nav.innerHTML = "";
+  TABS.forEach(function (t) {
+    var b = el("<button>" + esc(t.label) + (t.id === "messages" ? ' <span class="n" id="msgCount"></span>' : "") + "</button>");
+    b.classList.toggle("on", t.id === currentTab);
+    b.addEventListener("click", function () { currentTab = t.id; drawTabs(); openTab(t.id); });
+    nav.appendChild(b);
+  });
+}
+
+function refreshMsgCount() {
+  api("/api/messages").then(function (list) {
+    var n = list.filter(function (m) { return !m.lu; }).length;
+    var s = $("#msgCount");
+    if (s) s.textContent = n ? "(" + n + ")" : "";
+  }).catch(function () {});
+}
+
+function openTab(id) {
+  var panel = $("#panel");
+  panel.innerHTML = '<div class="empty">Chargement…</div>';
+  if (SCHEMAS[id]) return listView(id);
+  if (id === "profile") return singletonView("/api/profile", PROFILE_SCHEMA);
+  if (id === "apropos") return singletonView("/api/apropos", APROPOS_SCHEMA);
+  if (id === "messages") return messagesView();
+  if (id === "reglages") return reglagesView();
+}
+
+/* ================================================================
+   Vue liste (collections)
+================================================================ */
+function listView(name) {
+  var s = SCHEMAS[name];
+  api("/api/content/" + name).then(function (items) {
+    var panel = $("#panel");
+    panel.innerHTML = "";
+    panel.appendChild(el('<div class="bar"><h2>' + esc(s.label) + '</h2><button class="btn" id="addBtn">+ Ajouter</button></div>'));
+    panel.appendChild(el('<div class="hint">' + esc(s.aide) + " Utilisez ▲ ▼ pour changer l'ordre d'affichage.</div>"));
+    $("#addBtn").addEventListener("click", function () {
+      formView(name, {}, items.length ? Math.max.apply(null, items.map(function (i) { return i.ordre || 0; })) + 1 : 1);
+    });
+    if (!items.length) panel.appendChild(el('<div class="empty">Rien pour le moment — cliquez sur « + Ajouter ».</div>'));
+    items.forEach(function (doc, idx) {
+      var v = s.vignette(doc);
+      var c = el(
+        '<div class="card">' +
+        (v ? '<img class="thumb" src="' + esc(v) + '" alt="">' : '<div class="thumb txt">' + esc((s.resume(doc) || "?").charAt(0)) + "</div>") +
+        '<div class="cbody"><div class="ct">' + esc(s.resume(doc)) + (doc.epingle ? '<span class="badge">épinglé</span>' : "") +
+        '</div><div class="cs">' + esc(s.sousTitre(doc)) + "</div></div>" +
+        '<div class="acts">' +
+        '<button class="icobtn up" title="Monter">▲</button>' +
+        '<button class="icobtn down" title="Descendre">▼</button>' +
+        '<button class="icobtn edit" title="Modifier">✎</button>' +
+        '<button class="icobtn danger del" title="Supprimer">🗑</button>' +
+        "</div></div>"
+      );
+      $(".edit", c).addEventListener("click", function () { formView(name, doc); });
+      $(".del", c).addEventListener("click", function () {
+        if (!confirm("Supprimer « " + s.resume(doc) + " » ? Cette action est définitive.")) return;
+        api("/api/content/" + name + "/" + doc._id, { method: "DELETE" }).then(function () { listView(name); });
+      });
+      $(".up", c).addEventListener("click", function () { swapOrder(name, items, idx, idx - 1); });
+      $(".down", c).addEventListener("click", function () { swapOrder(name, items, idx, idx + 1); });
+      panel.appendChild(c);
+    });
+  }).catch(showErr);
+}
+
+function swapOrder(name, items, a, b) {
+  if (b < 0 || b >= items.length) return;
+  var A = items[a], B = items[b];
+  var oa = A.ordre != null ? A.ordre : a + 1;
+  var ob = B.ordre != null ? B.ordre : b + 1;
+  if (oa === ob) ob = oa + (b > a ? 1 : -1);
+  Promise.all([
+    api("/api/content/" + name + "/" + A._id, { method: "PUT", body: { ordre: ob } }),
+    api("/api/content/" + name + "/" + B._id, { method: "PUT", body: { ordre: oa } }),
+  ]).then(function () { listView(name); }).catch(showErr);
+}
+
+function showErr(e) {
+  $("#panel").innerHTML = '<div class="empty">' + esc(e.message) + "</div>";
+}
+
+/* ================================================================
+   Formulaires génériques
+================================================================ */
+function fieldInput(f, value) {
+  var wrap = document.createElement("div");
+  wrap.dataset.k = f.k;
+  wrap.dataset.type = f.type;
+  if (f.showIf) wrap.dataset.showif = f.showIf.join(",");
+  var lab = "<label>" + esc(f.label) + (f.help ? ' <span class="help">— ' + esc(f.help) + "</span>" : "") + "</label>";
+
+  if (f.type === "text") {
+    wrap.innerHTML = lab + '<input type="text">';
+    $("input", wrap).value = value || "";
+  } else if (f.type === "textarea") {
+    wrap.innerHTML = lab + "<textarea></textarea>";
+    $("textarea", wrap).value = value || "";
+  } else if (f.type === "tags") {
+    wrap.innerHTML = lab + '<input type="text">';
+    $("input", wrap).value = (value || []).join(", ");
+  } else if (f.type === "check") {
+    wrap.innerHTML = '<label class="check"><input type="checkbox"> ' + esc(f.label) + "</label>";
+    $("input", wrap).checked = !!value;
+  } else if (f.type === "select") {
+    wrap.innerHTML = lab + "<select>" + f.opts.map(function (o) {
+      return '<option value="' + esc(o[0]) + '">' + esc(o[1]) + "</option>";
+    }).join("") + "</select>";
+    $("select", wrap).value = value != null ? value : f.opts[0][0];
+  } else if (f.type === "media") {
+    wrap.innerHTML = lab + '<div class="media-field"></div>';
+    mediaWidget($(".media-field", wrap), value || "", f.accept);
+  } else if (f.type === "medialist") {
+    wrap.innerHTML = lab + '<div class="mlist"></div><button type="button" class="btn ghost sm" style="margin-top:8px">+ Ajouter une image</button>';
+    var mlist = $(".mlist", wrap);
+    (value || []).forEach(function (url) { addMediaRow(mlist, url, f.accept); });
+    wrap.querySelector(":scope > button").addEventListener("click", function () { addMediaRow(mlist, "", f.accept); });
+  } else if (f.type === "textlist") {
+    wrap.innerHTML = lab + '<div class="tlist"></div><button type="button" class="btn ghost sm" style="margin-top:8px">+ Ajouter une ligne</button>';
+    var tlist = $(".tlist", wrap);
+    (value || []).forEach(function (t) { addTextRow(tlist, t); });
+    wrap.querySelector(":scope > button").addEventListener("click", function () { addTextRow(tlist, ""); });
+  } else if (f.type === "list") {
+    wrap.innerHTML = lab + '<div class="olist"></div><button type="button" class="btn ghost sm" style="margin-top:8px">+ Ajouter</button>';
+    var olist = $(".olist", wrap);
+    (value || []).forEach(function (item) { addObjRow(olist, f.sub, item); });
+    wrap.querySelector(":scope > button").addEventListener("click", function () { addObjRow(olist, f.sub, {}); });
+  }
+  return wrap;
+}
+
+function addTextRow(container, text) {
+  var row = el('<div style="display:flex;gap:8px;margin-bottom:8px"><input type="text"><button type="button" class="icobtn danger" title="Retirer">✕</button></div>');
+  $("input", row).value = text || "";
+  $("button", row).addEventListener("click", function () { row.remove(); });
+  container.appendChild(row);
+}
+
+function addMediaRow(container, url, accept) {
+  var row = el('<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><div class="media-field" style="flex:1"></div><button type="button" class="icobtn danger" title="Retirer">✕</button></div>');
+  mediaWidget($(".media-field", row), url || "", accept);
+  $("button", row).addEventListener("click", function () { row.remove(); });
+  container.appendChild(row);
+}
+
+function addObjRow(container, sub, item) {
+  var row = el('<div class="subrow"><button type="button" class="icobtn danger rm" title="Retirer">✕</button><div class="fields"></div></div>');
+  var fields = $(".fields", row);
+  sub.forEach(function (sf) { fields.appendChild(fieldInput(sf, item[sf.k])); });
+  $(".rm", row).addEventListener("click", function () { row.remove(); });
+  container.appendChild(row);
+}
+
+/* champ média : aperçu + import fichier + lien manuel */
+function mediaWidget(box, url, accept) {
+  box.dataset.url = url || "";
+  function draw() {
+    var u = box.dataset.url;
+    var isVideo = u && (/\.mp4|\.webm/.test(u) || (accept || "").indexOf("video") === 0 && u.indexOf("/api/media/") === 0);
+    box.innerHTML =
+      (u ? (isVideo ? '<video src="' + esc(u) + '" muted></video>' : '<img src="' + esc(u) + '" alt="">')
+         : '<div class="media-empty">+</div>') +
+      '<div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:150px">' +
+      '<button type="button" class="btn ghost sm pick">' + (u ? "Remplacer…" : "Importer un fichier…") + "</button>" +
+      '<input type="text" class="lnk" placeholder="…ou collez un lien" style="font-size:12px;padding:7px 10px">' +
+      '<span class="upmsg" style="font-size:11.5px;color:var(--ink-soft)"></span>' +
+      "</div>" +
+      '<input type="file" hidden accept="' + esc(accept || "image/*") + '">';
+    $(".lnk", box).value = u || "";
+    $(".lnk", box).addEventListener("change", function () { box.dataset.url = this.value.trim(); draw(); });
+    $(".pick", box).addEventListener("click", function () { $("input[type=file]", box).click(); });
+    $("input[type=file]", box).addEventListener("change", function () {
+      var file = this.files[0];
+      if (!file) return;
+      $(".upmsg", box).textContent = "Envoi en cours…";
+      uploadFile(file).then(function (u2) {
+        box.dataset.url = u2; draw();
+      }).catch(function (e) {
+        $(".upmsg", box).textContent = e.message;
+      });
+    });
+  }
+  draw();
+}
+
+function collectFields(root) {
+  var out = {};
+  root.querySelectorAll(":scope > [data-k]").forEach(function (w) {
+    var t = w.dataset.type, k = w.dataset.k;
+    if (t === "text") out[k] = $("input", w).value.trim();
+    else if (t === "textarea") out[k] = $("textarea", w).value;
+    else if (t === "tags") out[k] = $("input", w).value.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+    else if (t === "check") out[k] = $("input", w).checked;
+    else if (t === "select") out[k] = $("select", w).value;
+    else if (t === "media") out[k] = $(".media-field", w).dataset.url || "";
+    else if (t === "medialist") {
+      out[k] = [].map.call(w.querySelectorAll(".media-field"), function (m) { return m.dataset.url; }).filter(Boolean);
+    } else if (t === "textlist") {
+      out[k] = [].map.call(w.querySelectorAll(".tlist input"), function (i) { return i.value.trim(); }).filter(Boolean);
+    } else if (t === "list") {
+      out[k] = [].map.call(w.querySelectorAll(":scope > .olist > .subrow"), function (row) {
+        return collectFields($(".fields", row));
+      });
+    }
+  });
+  return out;
+}
+
+function applyShowIf(form) {
+  var typeSel = form.querySelector('[data-k="type"] select');
+  var type = typeSel ? typeSel.value : null;
+  form.querySelectorAll("[data-showif]").forEach(function (w) {
+    w.style.display = !type || w.dataset.showif.split(",").indexOf(type) !== -1 ? "" : "none";
+  });
+}
+
+function formView(name, doc, nextOrdre) {
+  var s = SCHEMAS[name];
+  var isNew = !doc._id;
+  var panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el('<div class="bar"><h2>' + (isNew ? "Nouvelle " : "Modifier la ") + esc(s.labelUn) + '</h2><button class="btn ghost" id="backBtn">← Retour</button></div>'));
+  $("#backBtn").addEventListener("click", function () { listView(name); });
+
+  var form = el('<div class="form"></div>');
+  s.champs.forEach(function (f) { form.appendChild(fieldInput(f, doc[f.k])); });
+  var foot = el(
+    '<div class="formfoot"><button class="btn" id="saveBtn">Enregistrer</button>' +
+    '<button class="btn ghost" id="cancelBtn">Annuler</button><span class="savemsg" id="saveMsg"></span></div>'
+  );
+  form.appendChild(foot);
+  panel.appendChild(form);
+
+  applyShowIf(form);
+  var typeSel = form.querySelector('[data-k="type"] select');
+  if (typeSel) typeSel.addEventListener("change", function () { applyShowIf(form); });
+
+  $("#cancelBtn").addEventListener("click", function () { listView(name); });
+  $("#saveBtn").addEventListener("click", function () {
+    var btn = $("#saveBtn"); btn.disabled = true;
+    $("#saveMsg").textContent = "";
+    var body = collectFields(form);
+    if (isNew) body.ordre = nextOrdre || 1;
+    var req = isNew
+      ? api("/api/content/" + name, { method: "POST", body: body })
+      : api("/api/content/" + name + "/" + doc._id, { method: "PUT", body: body });
+    req.then(function () { listView(name); })
+      .catch(function (e) {
+        btn.disabled = false;
+        var m = $("#saveMsg"); m.textContent = e.message; m.className = "savemsg bad";
+      });
+  });
+}
+
+/* ================================================================
+   Vue document unique (Profil / À propos)
+================================================================ */
+function singletonView(path, schema) {
+  api(path).then(function (doc) {
+    var panel = $("#panel");
+    panel.innerHTML = "";
+    panel.appendChild(el('<div class="bar"><h2>' + esc(schema.label) + "</h2></div>"));
+    panel.appendChild(el('<div class="hint">' + esc(schema.aide) + "</div>"));
+    var form = el('<div class="form"></div>');
+    schema.champs.forEach(function (f) { form.appendChild(fieldInput(f, doc[f.k])); });
+    var foot = el('<div class="formfoot"><button class="btn" id="saveBtn">Enregistrer</button><span class="savemsg" id="saveMsg"></span></div>');
+    form.appendChild(foot);
+    panel.appendChild(form);
+    $("#saveBtn").addEventListener("click", function () {
+      var btn = $("#saveBtn"); btn.disabled = true;
+      api(path, { method: "PUT", body: collectFields(form) })
+        .then(function () {
+          btn.disabled = false;
+          var m = $("#saveMsg"); m.textContent = "Enregistré ✓ — visible sur le site"; m.className = "savemsg ok";
+          setTimeout(function () { m.textContent = ""; }, 4000);
+        })
+        .catch(function (e) {
+          btn.disabled = false;
+          var m = $("#saveMsg"); m.textContent = e.message; m.className = "savemsg bad";
+        });
+    });
+  }).catch(showErr);
+}
+
+/* ================================================================
+   Messages
+================================================================ */
+function messagesView() {
+  api("/api/messages").then(function (list) {
+    var panel = $("#panel");
+    panel.innerHTML = "";
+    panel.appendChild(el('<div class="bar"><h2>Messages reçus</h2></div>'));
+    panel.appendChild(el('<div class="hint">Les messages envoyés depuis la bulle « Envoyer un message » du site arrivent ici. Répondez par email ou téléphone.</div>'));
+    if (!list.length) panel.appendChild(el('<div class="empty">Aucun message pour le moment.</div>'));
+    list.forEach(function (m) {
+      var d = m.createdAt ? new Date(m.createdAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : "";
+      var c = el(
+        '<div class="msg' + (m.lu ? "" : " unread") + '">' +
+        '<div class="mh"><span class="mn">' + esc(m.nom || "Anonyme") + "</span>" +
+        (m.email ? '<a class="me" href="mailto:' + esc(m.email) + '">' + esc(m.email) + "</a>" : "") +
+        '<span class="md">' + esc(d) + "</span></div>" +
+        '<div class="mt">' + esc(m.message) + "</div>" +
+        '<div class="macts">' +
+        (m.lu ? "" : '<button class="btn ghost sm lu">Marquer comme lu</button>') +
+        '<button class="btn danger sm del">Supprimer</button>' +
+        "</div></div>"
+      );
+      var lu = $(".lu", c);
+      if (lu) lu.addEventListener("click", function () {
+        api("/api/messages/" + m._id + "/lu", { method: "PUT" }).then(function () { messagesView(); refreshMsgCount(); });
+      });
+      $(".del", c).addEventListener("click", function () {
+        if (!confirm("Supprimer ce message ?")) return;
+        api("/api/messages/" + m._id, { method: "DELETE" }).then(function () { messagesView(); refreshMsgCount(); });
+      });
+      panel.appendChild(c);
+    });
+  }).catch(showErr);
+}
+
+/* ================================================================
+   Réglages (mot de passe)
+================================================================ */
+function reglagesView() {
+  var panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el('<div class="bar"><h2>Réglages</h2></div>'));
+  var form = el(
+    '<div class="form"><label>Nouveau mot de passe <span class="help">— 8 caractères minimum</span></label>' +
+    '<input id="np1" type="password" autocomplete="new-password">' +
+    "<label>Confirmez le mot de passe</label>" +
+    '<input id="np2" type="password" autocomplete="new-password">' +
+    '<div class="formfoot"><button class="btn" id="pwBtn">Changer le mot de passe</button><span class="savemsg" id="pwMsg"></span></div></div>'
+  );
+  panel.appendChild(form);
+  $("#pwBtn").addEventListener("click", function () {
+    var m = $("#pwMsg");
+    if ($("#np1").value !== $("#np2").value) { m.textContent = "Les deux mots de passe ne correspondent pas"; m.className = "savemsg bad"; return; }
+    api("/api/auth/password", { method: "POST", body: { password: $("#np1").value } })
+      .then(function () { m.textContent = "Mot de passe changé ✓"; m.className = "savemsg ok"; $("#np1").value = $("#np2").value = ""; })
+      .catch(function (e) { m.textContent = e.message; m.className = "savemsg bad"; });
+  });
+}
+
+/* ================================================================
+   Démarrage
+================================================================ */
+if (TOKEN) {
+  api("/api/messages").then(enter).catch(function () { logout(); });
+} else {
+  $("#loginView").hidden = false;
+}
+</script>
+</body>
+</html>
