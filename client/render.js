@@ -50,16 +50,41 @@
     );
   }
 
+  /* Lien de plateforme (YouTube, TikTok, Instagram, Facebook) → lecteur intégré.
+     Retourne null pour un fichier vidéo classique (.mp4…). */
+  function embedInfo(url) {
+    if (!url) return null;
+    var m;
+    if ((m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{6,})/)))
+      return { src: "https://www.youtube-nocookie.com/embed/" + m[1], ratio: /shorts\//.test(url) ? "9/16" : "16/9" };
+    if ((m = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/)))
+      return { src: "https://www.tiktok.com/embed/v2/" + m[1], ratio: "9/16" };
+    if ((m = url.match(/instagram\.com\/(?:p|reels?|tv)\/([\w-]+)/)))
+      return { src: "https://www.instagram.com/p/" + m[1] + "/embed", ratio: "9/16" };
+    if (/facebook\.com\/.*(?:\/videos?\/|watch|reel)|fb\.watch\//.test(url))
+      return { src: "https://www.facebook.com/plugins/video.php?show_text=false&href=" + encodeURIComponent(url), ratio: "9/16" };
+    return null;
+  }
+
+  function embedFrame(emb, style) {
+    return (
+      '<iframe src="' + esc(emb.src) + '" style="' + style + '" ' +
+      'frameborder="0" loading="lazy" allowfullscreen ' +
+      'allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"></iframe>'
+    );
+  }
+
   function postMedia(p) {
     var tag = p.tag ? '<span class="pm-tag">' + esc(p.tag) + "</span>" : "";
     if (p.type === "video" && p.video) {
-      return (
-        '<div class="post-media has-photo post-video">' + tag +
-        '<video controls preload="metadata" playsinline poster="' + esc(p.poster || "") + '"' +
-        ' src="' + esc(p.video) + '"' +
-        ' style="position:relative;width:100%;height:100%;object-fit:contain;z-index:1;display:block">' +
-        "Votre navigateur ne peut pas lire cette vidéo.</video></div>"
-      );
+      var emb = embedInfo(p.video);
+      var inner = emb
+        ? embedFrame(emb, "position:relative;width:100%;height:100%;border:0;z-index:1;display:block")
+        : '<video controls preload="metadata" playsinline poster="' + esc(p.poster || "") + '"' +
+          ' src="' + esc(p.video) + '"' +
+          ' style="position:relative;width:100%;height:100%;object-fit:contain;z-index:1;display:block">' +
+          "Votre navigateur ne peut pas lire cette vidéo.</video>";
+      return '<div class="post-media has-photo post-video">' + tag + inner + "</div>";
     }
     var imgs = p.images || [];
     if (!imgs.length) return "";
@@ -110,10 +135,14 @@
   }
 
   function videoFigure(v, wide) {
+    var emb = embedInfo(v.video);
+    var media = emb
+      ? embedFrame(emb, "width:100%;aspect-ratio:" + emb.ratio + ";border:0;display:block;background:#06080F")
+      : '<video controls preload="metadata" playsinline poster="' + esc(v.poster || "") + '" src="' + esc(v.video) + '">' +
+        "Votre navigateur ne peut pas lire cette vidéo.</video>";
     return (
       '<figure class="vid-item' + (wide ? " vid-wide" : "") + '">' +
-      '<video controls preload="metadata" playsinline poster="' + esc(v.poster || "") + '" src="' + esc(v.video) + '">' +
-      "Votre navigateur ne peut pas lire cette vidéo.</video>" +
+      media +
       "<figcaption><span class=\"gal-t\">" + esc(v.titre) + '</span><span class="gal-tag">' + esc(v.tag || "") + "</span></figcaption>" +
       "</figure>"
     );
