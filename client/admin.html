@@ -89,7 +89,17 @@ main{max-width:860px;margin:0 auto;padding:6px 14px 90px}
 .msg .me{font-size:12.5px;color:var(--clay);word-break:break-all}
 .msg .md{font-size:11px;color:var(--ink-soft);font-family:var(--mono);margin-left:auto}
 .msg .mt{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
-.msg .macts{display:flex;gap:8px;margin-top:10px}
+.msg .macts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.msg.spam{opacity:.72;border-style:dashed}
+.msg .tagspam{font-family:var(--mono);font-size:10px;background:#fceaea;color:var(--bad);border-radius:6px;padding:2px 7px}
+.msgbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.msgbar input[type=search]{flex:1;min-width:180px;font-size:13px;padding:9px 12px}
+.segs{display:flex;gap:4px;background:var(--surface-2);border-radius:99px;padding:3px}
+.segs button{border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap}
+.segs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(14,17,22,.12)}
+.pager{display:flex;align-items:center;gap:12px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.pager .pginfo{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+.pager button:disabled{opacity:.4;cursor:default}
 .empty{text-align:center;color:var(--ink-soft);padding:40px 0;font-size:14px}
 </style>
 </head>
@@ -149,10 +159,74 @@ function api(path, opts) {
   });
 }
 
-function uploadFile(file) {
-  var fd = new FormData();
-  fd.append("file", file);
-  return api("/api/media", { method: "POST", body: fd }).then(function (d) { return d.url; });
+/* ================================================================
+   Import de médias
+   Avec Cloudinary configuré : le fichier part DIRECTEMENT du navigateur vers
+   Cloudinary (pas de plafond de taille côté Vercel), le serveur ne fait que
+   signer la demande puis enregistrer la fiche. Sinon : envoi classique vers
+   /api/media, stocké en base.
+================================================================ */
+var MEDIA_CFG = null;
+function mediaConfig() {
+  if (MEDIA_CFG) return Promise.resolve(MEDIA_CFG);
+  return api("/api/media/config").then(function (c) { MEDIA_CFG = c; return c; });
+}
+
+function mo(n) { return Math.round(n / 1024 / 1024) + " Mo"; }
+
+/* POST multipart avec progression (fetch ne sait pas suivre l'upload) */
+function postAvecProgression(url, formData, entetes, onProgress) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    Object.keys(entetes || {}).forEach(function (k) { xhr.setRequestHeader(k, entetes[k]); });
+    xhr.upload.addEventListener("progress", function (e) {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    });
+    xhr.addEventListener("load", function () {
+      var d = {};
+      try { d = JSON.parse(xhr.responseText); } catch (_) {}
+      if (xhr.status >= 200 && xhr.status < 300) resolve(d);
+      else reject(new Error(d.erreur || (d.error && d.error.message) || "Envoi impossible (erreur " + xhr.status + ")"));
+    });
+    xhr.addEventListener("error", function () { reject(new Error("Connexion interrompue pendant l'envoi")); });
+    xhr.addEventListener("abort", function () { reject(new Error("Envoi annulé")); });
+    xhr.send(formData);
+  });
+}
+
+function uploadFile(file, onProgress) {
+  return mediaConfig().then(function (cfg) {
+    var estVideo = (file.type || "").indexOf("video/") === 0;
+    var max = estVideo ? cfg.maxVideo : cfg.maxImage;
+    if (cfg.typesAutorises && cfg.typesAutorises.indexOf(file.type) === -1) {
+      throw new Error("Format non accepté (jpg, png, webp, gif, avif, mp4, webm, mov)");
+    }
+    if (file.size > max) {
+      throw new Error("Fichier trop lourd : " + mo(file.size) + " (maximum " + mo(max) + ")");
+    }
+
+    // --- Repli : envoi vers notre serveur ---
+    if (!cfg.cloudinary) {
+      var fd = new FormData();
+      fd.append("file", file);
+      return postAvecProgression("/api/media", fd, { Authorization: "Bearer " + TOKEN }, onProgress)
+        .then(function (d) { return d.url; });
+    }
+
+    // --- Cloudinary : signature → upload direct → enregistrement ---
+    return api("/api/media/signature", { method: "POST", body: { type: file.type } }).then(function (s) {
+      var fd2 = new FormData();
+      fd2.append("file", file);
+      fd2.append("api_key", s.apiKey);
+      fd2.append("timestamp", s.timestamp);
+      fd2.append("folder", s.folder);
+      fd2.append("signature", s.signature);
+      return postAvecProgression(s.endpoint, fd2, null, onProgress);
+    }).then(function (rep) {
+      return api("/api/media/register", { method: "POST", body: rep });
+    }).then(function (d) { return d.url; });
+  });
 }
 
 /* ================================================================
@@ -181,7 +255,7 @@ $("#logoutBtn").addEventListener("click", logout);
    types de champ : text, textarea, check, select, tags, media,
                     medialist, textlist, list (sous-objets)
 ================================================================ */
-var MEDIA_HELP = "importez un fichier (10 Mo max) ou collez un lien — pour les vidéos, un lien YouTube, TikTok, Instagram ou Facebook est lu directement sur le site";
+var MEDIA_HELP = "importez un fichier (photo 10 Mo, vidéo 100 Mo) ou collez un lien — pour les vidéos, un lien YouTube, TikTok, Instagram ou Facebook est lu directement sur le site";
 
 var SCHEMAS = {
   posts: {
@@ -370,10 +444,9 @@ function drawTabs() {
 }
 
 function refreshMsgCount() {
-  api("/api/messages").then(function (list) {
-    var n = list.filter(function (m) { return !m.lu; }).length;
+  api("/api/messages?limite=1").then(function (d) {
     var s = $("#msgCount");
-    if (s) s.textContent = n ? "(" + n + ")" : "";
+    if (s) s.textContent = d.nonLus ? "(" + d.nonLus + ")" : "";
   }).catch(function () {});
 }
 
@@ -519,7 +592,8 @@ function mediaWidget(box, url, accept) {
   box.dataset.url = url || "";
   function draw() {
     var u = box.dataset.url;
-    var isVideo = u && (/\.mp4|\.webm/.test(u) || (accept || "").indexOf("video") === 0 && u.indexOf("/api/media/") === 0);
+    var isVideo = u && (/\.(mp4|webm|mov)(\?|$)/i.test(u) || u.indexOf("/video/upload/") !== -1 ||
+      ((accept || "").indexOf("video") === 0 && u.indexOf("/api/media/") === 0));
     box.innerHTML =
       (u ? (isVideo ? '<video src="' + esc(u) + '" muted></video>' : '<img src="' + esc(u) + '" alt="">')
          : '<div class="media-empty">+</div>') +
@@ -535,11 +609,19 @@ function mediaWidget(box, url, accept) {
     $("input[type=file]", box).addEventListener("change", function () {
       var file = this.files[0];
       if (!file) return;
-      $(".upmsg", box).textContent = "Envoi en cours…";
-      uploadFile(file).then(function (u2) {
+      var msg = $(".upmsg", box);
+      var pick = $(".pick", box);
+      msg.style.color = "var(--ink-soft)";
+      msg.textContent = "Préparation…";
+      pick.disabled = true;
+      uploadFile(file, function (pct) {
+        msg.textContent = "Envoi… " + pct + "%" + (pct === 100 ? " (finalisation)" : "");
+      }).then(function (u2) {
         box.dataset.url = u2; draw();
       }).catch(function (e) {
-        $(".upmsg", box).textContent = e.message;
+        pick.disabled = false;
+        msg.style.color = "var(--bad)";
+        msg.textContent = e.message;
       });
     });
   }
@@ -648,36 +730,135 @@ function singletonView(path, schema) {
 /* ================================================================
    Messages
 ================================================================ */
+var MSG_ETAT = { filtre: "tous", q: "", page: 1 };
+
+function dateCourte(iso) {
+  if (!iso) return "";
+  var d = new Date(iso), maintenant = new Date();
+  var ecart = (maintenant - d) / 1000;
+  if (ecart < 60) return "à l'instant";
+  if (ecart < 3600) return "il y a " + Math.floor(ecart / 60) + " min";
+  if (ecart < 86400) return "il y a " + Math.floor(ecart / 3600) + " h";
+  return d.toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+}
+
 function messagesView() {
-  api("/api/messages").then(function (list) {
+  var url = "/api/messages?filtre=" + MSG_ETAT.filtre +
+    "&q=" + encodeURIComponent(MSG_ETAT.q) + "&page=" + MSG_ETAT.page;
+  api(url).then(function (d) {
     var panel = $("#panel");
     panel.innerHTML = "";
-    panel.appendChild(el('<div class="bar"><h2>Messages reçus</h2></div>'));
-    panel.appendChild(el('<div class="hint">Les messages envoyés depuis la bulle « Envoyer un message » du site arrivent ici. Répondez par email ou téléphone.</div>'));
-    if (!list.length) panel.appendChild(el('<div class="empty">Aucun message pour le moment.</div>'));
-    list.forEach(function (m) {
-      var d = m.createdAt ? new Date(m.createdAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : "";
+
+    panel.appendChild(el(
+      '<div class="bar"><h2>Messages reçus' +
+      (d.nonLus ? ' <span class="badge">' + d.nonLus + ' non lu' + (d.nonLus > 1 ? "s" : "") + "</span>" : "") +
+      "</h2>" +
+      (d.nonLus ? '<button class="btn ghost sm" id="allRead">Tout marquer comme lu</button>' : "") +
+      "</div>"
+    ));
+    panel.appendChild(el('<div class="hint">Les messages envoyés depuis la bulle « Envoyer un message » du site arrivent ici. Cliquez sur « Répondre » pour ouvrir votre boîte mail avec la réponse déjà préparée.</div>'));
+
+    /* --- filtres + recherche --- */
+    var barre = el(
+      '<div class="msgbar">' +
+      '<div class="segs">' +
+      ["tous", "nonlus", "lus", "spam"].map(function (f) {
+        var lab = { tous: "Tous", nonlus: "Non lus", lus: "Lus", spam: "Spam" }[f];
+        return '<button data-f="' + f + '"' + (MSG_ETAT.filtre === f ? ' class="on"' : "") + ">" + lab + "</button>";
+      }).join("") +
+      "</div>" +
+      '<input type="search" id="msgQ" placeholder="Rechercher un nom, un email, un mot…" value="' + esc(MSG_ETAT.q) + '">' +
+      "</div>"
+    );
+    panel.appendChild(barre);
+    barre.querySelectorAll(".segs button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        MSG_ETAT.filtre = b.dataset.f; MSG_ETAT.page = 1; messagesView();
+      });
+    });
+    var champ = $("#msgQ", barre), minuteur;
+    champ.addEventListener("input", function () {
+      clearTimeout(minuteur);
+      minuteur = setTimeout(function () {
+        MSG_ETAT.q = champ.value.trim(); MSG_ETAT.page = 1;
+        messagesView();
+        var c = $("#msgQ"); if (c) { c.focus(); c.setSelectionRange(c.value.length, c.value.length); }
+      }, 300);
+    });
+
+    var allRead = $("#allRead");
+    if (allRead) allRead.addEventListener("click", function () {
+      allRead.disabled = true;
+      api("/api/messages/tout-lu", { method: "POST" })
+        .then(function () { messagesView(); refreshMsgCount(); });
+    });
+
+    /* --- liste --- */
+    if (!d.items.length) {
+      panel.appendChild(el('<div class="empty">' +
+        (d.total ? "Aucun message ne correspond à cette recherche." : "Aucun message pour le moment.") +
+        "</div>"));
+      return;
+    }
+
+    d.items.forEach(function (m) {
       var c = el(
-        '<div class="msg' + (m.lu ? "" : " unread") + '">' +
-        '<div class="mh"><span class="mn">' + esc(m.nom || "Anonyme") + "</span>" +
+        '<div class="msg' + (m.lu ? "" : " unread") + (m.spam ? " spam" : "") + '">' +
+        '<div class="mh">' +
+        '<span class="mn">' + esc(m.nom || "Anonyme") + "</span>" +
         (m.email ? '<a class="me" href="mailto:' + esc(m.email) + '">' + esc(m.email) + "</a>" : "") +
-        '<span class="md">' + esc(d) + "</span></div>" +
+        (m.spam ? '<span class="tagspam">spam probable</span>' : "") +
+        '<span class="md" title="' + esc(m.createdAt || "") + '">' + esc(dateCourte(m.createdAt)) + "</span>" +
+        "</div>" +
         '<div class="mt">' + esc(m.message) + "</div>" +
         '<div class="macts">' +
-        (m.lu ? "" : '<button class="btn ghost sm lu">Marquer comme lu</button>') +
+        (m.email ? '<a class="btn sm rep">Répondre</a>' : "") +
+        '<button class="btn ghost sm lu">' + (m.lu ? "Marquer non lu" : "Marquer comme lu") + "</button>" +
         '<button class="btn danger sm del">Supprimer</button>' +
         "</div></div>"
       );
-      var lu = $(".lu", c);
-      if (lu) lu.addEventListener("click", function () {
-        api("/api/messages/" + m._id + "/lu", { method: "PUT" }).then(function () { messagesView(); refreshMsgCount(); });
+
+      var rep = $(".rep", c);
+      if (rep) {
+        var objet = "Votre message sur pauleackerman.com";
+        var SL = String.fromCharCode(10); // saut de ligne
+        var cite = String(m.message || "").split(SL)
+          .map(function (l) { return "> " + l; }).join(SL);
+        var corps = "Bonjour " + (m.nom || "") + "," + SL + SL + SL + SL +
+          "---" + SL + "Votre message :" + SL + cite;
+        rep.href = "mailto:" + encodeURIComponent(m.email) +
+          "?subject=" + encodeURIComponent(objet) + "&body=" + encodeURIComponent(corps);
+        rep.addEventListener("click", function () {
+          if (!m.lu) api("/api/messages/" + m._id, { method: "PUT", body: { lu: true } })
+            .then(function () { refreshMsgCount(); });
+        });
+      }
+
+      $(".lu", c).addEventListener("click", function () {
+        api("/api/messages/" + m._id, { method: "PUT", body: { lu: !m.lu } })
+          .then(function () { messagesView(); refreshMsgCount(); });
       });
       $(".del", c).addEventListener("click", function () {
-        if (!confirm("Supprimer ce message ?")) return;
-        api("/api/messages/" + m._id, { method: "DELETE" }).then(function () { messagesView(); refreshMsgCount(); });
+        if (!confirm("Supprimer définitivement ce message ?")) return;
+        api("/api/messages/" + m._id, { method: "DELETE" })
+          .then(function () { messagesView(); refreshMsgCount(); });
       });
       panel.appendChild(c);
     });
+
+    /* --- pagination --- */
+    if (d.pages > 1) {
+      var pg = el(
+        '<div class="pager">' +
+        '<button class="btn ghost sm" id="prev"' + (d.page <= 1 ? " disabled" : "") + ">← Précédents</button>" +
+        '<span class="pginfo">Page ' + d.page + " sur " + d.pages + " · " + d.filtres + " message" + (d.filtres > 1 ? "s" : "") + "</span>" +
+        '<button class="btn ghost sm" id="next"' + (d.page >= d.pages ? " disabled" : "") + ">Suivants →</button>" +
+        "</div>"
+      );
+      panel.appendChild(pg);
+      $("#prev", pg).addEventListener("click", function () { MSG_ETAT.page--; messagesView(); window.scrollTo(0, 0); });
+      $("#next", pg).addEventListener("click", function () { MSG_ETAT.page++; messagesView(); window.scrollTo(0, 0); });
+    }
   }).catch(showErr);
 }
 
@@ -709,7 +890,7 @@ function reglagesView() {
    Démarrage
 ================================================================ */
 if (TOKEN) {
-  api("/api/messages").then(enter).catch(function () { logout(); });
+  api("/api/messages?limite=1").then(enter).catch(function () { logout(); });
 } else {
   $("#loginView").hidden = false;
 }

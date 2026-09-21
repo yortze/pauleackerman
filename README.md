@@ -16,8 +16,11 @@ contenu depuis une API, et Paule gère tout elle-même depuis **`/admin`** — s
 - **Messages** : lire les messages envoyés depuis la bulle « Envoyer un message » du site
 - **Réglages** : changer son mot de passe
 
-Les images/vidéos importées depuis l'admin sont stockées **dans la base de données**
-(10 Mo max par fichier) — rien à configurer de plus.
+Les images/vidéos importées depuis l'admin partent sur **Cloudinary** (photo 10 Mo,
+vidéo 100 Mo). Le fichier va directement du navigateur de Paule vers Cloudinary :
+il ne traverse pas le serveur, donc la limite de taille des requêtes de Vercel
+(~4,5 Mo) ne s'applique pas. Sans clés Cloudinary, le site retombe sur l'ancien
+stockage en base (10 Mo max) — pratique en local.
 
 ## Structure
 
@@ -52,6 +55,19 @@ Mot de passe admin par défaut : `paule-admin` (à changer dès la première con
    | `MONGODB_URI` | l'URI Atlas copiée à l'étape 1 |
    | `JWT_SECRET` | une longue phrase aléatoire (secret de session) |
    | `ADMIN_PASSWORD` | le premier mot de passe de Paule |
+   | `CLOUDINARY_CLOUD_NAME` | *Cloud name* du dashboard Cloudinary |
+   | `CLOUDINARY_API_KEY` | *API key* du dashboard Cloudinary |
+   | `CLOUDINARY_API_SECRET` | *API secret* du dashboard Cloudinary |
+
+   Les trois clés Cloudinary se trouvent sur le dashboard, encadré *Product
+   Environment Credentials*. On peut aussi coller la seule variable
+   `CLOUDINARY_URL` (`cloudinary://clé:secret@cloud`) : elle contient les trois.
+   `.env.example` liste tout, avec les variantes optionnelles.
+
+   > L'`API secret` ne quitte jamais le serveur : l'admin lui demande une
+   > signature d'upload, puis envoie le fichier à Cloudinary avec cette
+   > signature. Le dossier de destination est signé lui aussi, et la réponse de
+   > Cloudinary est re-vérifiée côté serveur avant d'être enregistrée.
 
 4. *Deploy*. Le site est sur `https://<projet>.vercel.app`, l'admin sur `…/admin`.
 
@@ -62,8 +78,19 @@ dans la base (seed). Ensuite, tout se gère depuis l'admin.
 
 - Sans `MONGODB_URI`, le serveur retombe sur un stockage JSON local — parfait en
   local, **insuffisant sur Vercel** (écritures perdues à chaque redéploiement).
-- Les médias du dépôt (`client/media/`) sont servis statiquement avec cache long ;
-  les médias importés via l'admin sont servis sur `/api/media/:id` (support des
-  Range requests pour les vidéos sur iOS/Safari).
+- Les médias du dépôt (`client/media/`) sont servis statiquement avec cache long.
+  Avec Cloudinary, les imports de l'admin sont servis par le CDN Cloudinary
+  (images en `f_auto,q_auto`). Sans Cloudinary, ils sont servis sur
+  `/api/media/:id` (support des Range requests pour les vidéos sur iOS/Safari).
+  Les anciens liens `/api/media/:id` restent valides : ils redirigent vers le CDN.
+- Supprimer un média depuis la médiathèque le supprime aussi sur Cloudinary.
 - Connexion admin : JWT 12 h, anti-bruteforce (5 essais / 10 min / IP), mot de passe
-  hashé bcrypt. La boîte DM du site a un honeypot + rate-limit anti-spam.
+  hashé bcrypt.
+- Boîte DM du site : honeypot, délai minimum de saisie, 20 s entre deux envois,
+  5 messages / jour / IP et 80 / jour au total. Les compteurs sont **en base**
+  (un compteur en mémoire ne protège de rien en serverless), et la clé est une
+  empreinte HMAC de l'IP — l'IP en clair n'est jamais stockée. Les messages
+  bourrés de liens sont marqués « spam probable » sans être jetés.
+- Onglet Messages de l'admin : filtres (tous / non lus / lus / spam), recherche,
+  pagination, « tout marquer comme lu » et bouton « Répondre » qui ouvre la
+  messagerie de Paule avec la réponse déjà préparée.
