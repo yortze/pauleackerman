@@ -54,7 +54,13 @@ async function createApp() {
   app.use("/api/content", contentRouter());
   app.use("/api/messages", messages.router);
 
-  app.get("/api/health", (_req, res) => res.json({ ok: true, store: store.kind }));
+  // Diagnostic : permet de vérifier après un déploiement que la base et
+  // Cloudinary sont bien branchés, sans avoir à se connecter à l'admin.
+  app.get("/api/health", (_req, res) => res.json({
+    ok: true,
+    store: store.kind,
+    medias: require("./cloudinary").configured ? "cloudinary" : "base",
+  }));
 
   // Site statique (index.html, admin.html, médias du dépôt)
   if (fs.existsSync(CLIENT_DIR)) {
