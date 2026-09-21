@@ -850,8 +850,27 @@ svg{display:block}
 .typing i:nth-child(3){animation-delay:.36s}
 @keyframes td{0%,60%,100%{opacity:.3;transform:translateY(0)}
   30%{opacity:1;transform:translateY(-4px)}}
-.dm-foot{padding:14px 16px;border-top:1px solid var(--line);
+/* identité de l'expéditeur */
+.dm-id{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;padding:12px 16px 0}
+@media (max-width:420px){.dm-id{grid-template-columns:1fr}}
+.dm-id input{
+  min-width:0;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:10px;padding:9px 11px;font-family:inherit;font-size:12.5px;
+  color:var(--ink);outline:none;transition:border-color .15s}
+.dm-id input:focus{border-color:var(--clay)}
+.dm-id input.bad{border-color:var(--bad,#D64545);background:rgba(214,69,69,.06)}
+.dm-err{padding:7px 16px 0;font-size:11.5px;color:var(--bad,#D64545);
+  font-weight:600;display:none}
+.dm-err.show{display:block}
+.dm-foot{padding:12px 16px 14px;border-top:1px solid var(--line);
   display:flex;gap:9px;align-items:flex-end}
+.dm-count{padding:4px 16px 0;text-align:right;font-family:var(--mono);
+  font-size:10px;color:var(--ink-soft);opacity:0;transition:opacity .2s}
+.dm-count.show{opacity:1}
+.dm-count.over{color:var(--bad,#D64545);opacity:1}
+.dm-send:disabled{opacity:.5;cursor:default}
+.dm-send.envoi svg{animation:dmspin 1s linear infinite}
+@keyframes dmspin{to{transform:rotate(360deg)}}
 .dm-foot textarea{
   flex:1;border:1px solid var(--line);border-radius:13px;
   padding:11px 13px;font-family:inherit;font-size:14px;resize:none;
@@ -1217,14 +1236,16 @@ svg{display:block}
       <div class="bubble them" id="dmWelcome">Bonjour ! Ravie de vous lire. Dites-moi tout sur votre marque et votre projet — je reviens vers vous très vite.</div>
       <div class="typing" id="dmTyping"><i></i><i></i><i></i></div>
     </div>
-    <div style="display:flex;gap:8px;padding:10px 16px 0">
-      <input id="dmNom" type="text" placeholder="Votre nom" autocomplete="name" style="flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none">
-      <input id="dmEmail" type="email" placeholder="Votre email (pour la réponse)" autocomplete="email" style="flex:1.4;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none">
+    <div class="dm-id">
+      <input id="dmNom" type="text" placeholder="Votre nom" autocomplete="name" aria-label="Votre nom" maxlength="120">
+      <input id="dmEmail" type="email" placeholder="Votre email (pour la réponse)" autocomplete="email" aria-label="Votre email" maxlength="200" required>
       <input id="dmSite" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true">
     </div>
+    <div class="dm-err" id="dmErr" role="alert"></div>
+    <div class="dm-count" id="dmCount"></div>
     <div class="dm-foot">
-      <textarea id="dmInput" rows="1" placeholder="Écrivez votre message…"></textarea>
-      <button class="dm-send" id="dmSend"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-3-7-7-1z"/></svg></button>
+      <textarea id="dmInput" rows="1" placeholder="Écrivez votre message…" maxlength="4000" aria-label="Votre message"></textarea>
+      <button class="dm-send" id="dmSend" aria-label="Envoyer le message"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-3-7-7-1z"/></svg></button>
     </div>
     <div class="dm-mail">ou directement par mail — <a id="dmMail" href="mailto:roxanebillie@gmail.com">roxanebillie@gmail.com</a></div>
   </div>
@@ -1388,15 +1409,48 @@ svg{display:block}
   const dmBody=document.getElementById('dmBody');
   const dmInput=document.getElementById('dmInput');
   const dmTyping=document.getElementById('dmTyping');
-  function openDM(){overlay.classList.add('open');setTimeout(()=>dmInput.focus(),300);}
+  const dmNom=document.getElementById('dmNom');
+  const dmEmail=document.getElementById('dmEmail');
+  const dmSend=document.getElementById('dmSend');
+  const dmErr=document.getElementById('dmErr');
+  const dmCount=document.getElementById('dmCount');
+  const MAX=4000;
+  let ouvertureTs=0;
+
+  /* le navigateur se souvient du nom/email d'une visite à l'autre */
+  try{
+    dmNom.value=localStorage.getItem('pa_nom')||'';
+    dmEmail.value=localStorage.getItem('pa_email')||'';
+  }catch(_){}
+
+  function openDM(){
+    overlay.classList.add('open');
+    ouvertureTs=ouvertureTs||Date.now();
+    setTimeout(()=>{(dmEmail.value?dmInput:dmNom).focus();},300);
+  }
   function closeDM(){overlay.classList.remove('open');}
   document.addEventListener('click',e=>{if(e.target.closest('[data-open-dm]'))openDM();});
   document.getElementById('dmClose').addEventListener('click',closeDM);
   overlay.addEventListener('click',e=>{if(e.target===overlay)closeDM();});
 
+  function erreur(txt,champ){
+    dmErr.textContent=txt;
+    dmErr.classList.add('show');
+    if(champ){champ.classList.add('bad');champ.focus();}
+  }
+  function effaceErreur(){
+    dmErr.classList.remove('show');
+    dmNom.classList.remove('bad');dmEmail.classList.remove('bad');dmInput.classList.remove('bad');
+  }
+  [dmNom,dmEmail,dmInput].forEach(c=>c.addEventListener('input',effaceErreur));
+
   dmInput.addEventListener('input',()=>{
     dmInput.style.height='auto';
     dmInput.style.height=Math.min(dmInput.scrollHeight,90)+'px';
+    const n=dmInput.value.length;
+    dmCount.textContent=n+' / '+MAX;
+    dmCount.classList.toggle('show',n>MAX*0.75);
+    dmCount.classList.toggle('over',n>=MAX);
   });
 
   /* envoi réel : le message part dans la base et Paule le lit depuis /admin */
@@ -1411,49 +1465,78 @@ svg{display:block}
       dmBody.scrollTop=dmBody.scrollHeight;
     },delay||1200);
   }
+
+  const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   let sending=false;
+
   function sendDM(){
-    const txt=dmInput.value.trim();if(!txt||sending)return;
-    const email=document.getElementById('dmEmail').value.trim();
-    if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-      botSay('Petite chose avant d\'envoyer : laissez-moi votre email (juste au-dessus) pour que je puisse vous répondre.',700);
-      document.getElementById('dmEmail').focus();
-      return;
-    }
+    if(sending)return;
+    effaceErreur();
+
+    const txt=dmInput.value.trim();
+    const email=dmEmail.value.trim();
+
+    if(!email){return erreur('Laissez votre email pour que Paule puisse vous répondre.',dmEmail);}
+    if(!EMAIL_RE.test(email)){return erreur('Cet email ne semble pas valide — vérifiez-le.',dmEmail);}
+    if(txt.length<2){return erreur("Écrivez votre message avant de l'envoyer.",dmInput);}
+    if(txt.length>MAX){return erreur('Message trop long ('+MAX+' caractères maximum).',dmInput);}
+
+    try{
+      localStorage.setItem('pa_nom',dmNom.value.trim());
+      localStorage.setItem('pa_email',email);
+    }catch(_){}
+
     const me=document.createElement('div');
     me.className='bubble me';me.textContent=txt;
     dmBody.insertBefore(me,dmTyping);
     dmInput.value='';dmInput.style.height='auto';
+    dmCount.classList.remove('show','over');
     dmBody.scrollTop=dmBody.scrollHeight;
+
     sending=true;
+    dmSend.disabled=true;dmSend.classList.add('envoi');
+
+    function fini(){sending=false;dmSend.disabled=false;dmSend.classList.remove('envoi');}
+    function echec(message,rendreLeTexte){
+      fini();
+      if(rendreLeTexte){
+        me.remove();
+        dmInput.value=txt;
+        dmInput.dispatchEvent(new Event('input'));
+      }
+      erreur(message);
+    }
+
     fetch('/api/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        nom:document.getElementById('dmNom').value.trim(),
+        nom:dmNom.value.trim(),
         email:email,
         message:txt,
-        website:document.getElementById('dmSite').value
+        website:document.getElementById('dmSite').value,
+        ouvertureTs:ouvertureTs
       })
-    }).then(r=>r.json().then(d=>({ok:r.ok,d})))
+    }).then(r=>r.json().catch(()=>({})).then(d=>({ok:r.ok,d})))
       .then(({ok,d})=>{
-        sending=false;
         if(ok){
+          fini();
           botSay((window.__PROFILE&&window.__PROFILE.dmReponse)||
-            'Merci pour votre message ! Je l\'ai bien reçu. Je reviens vers vous en détail par email sous 24 h ouvrées — à très vite.',1600);
+            "Merci pour votre message ! Je l'ai bien reçu. Je reviens vers vous en détail par email sous 24 h ouvrées — à très vite.",1600);
         }else{
-          botSay(d&&d.erreur?d.erreur:'Oups, le message n\'est pas parti. Réessayez dans un instant.',700);
+          echec(d&&d.erreur?d.erreur:"Le message n'est pas parti. Réessayez dans un instant.",true);
         }
       })
       .catch(()=>{
-        sending=false;
-        botSay('Oups, le message n\'est pas parti (connexion ?). Vous pouvez aussi m\'écrire par mail juste en dessous.',700);
+        echec("Connexion interrompue — le message n'est pas parti. Réessayez, ou écrivez par mail juste en dessous.",true);
       });
   }
-  document.getElementById('dmSend').addEventListener('click',sendDM);
+  dmSend.addEventListener('click',sendDM);
   dmInput.addEventListener('keydown',e=>{
     if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendDM();}
   });
+  dmEmail.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();dmInput.focus();}});
+  dmNom.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();dmEmail.focus();}});
   addEventListener('keydown',e=>{if(e.key==='Escape')closeDM();});
 })();
 
