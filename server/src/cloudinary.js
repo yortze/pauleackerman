@@ -32,7 +32,15 @@ function sign(params) {
 
 /**
  * Paramètres à renvoyer à l'admin pour un upload direct navigateur → Cloudinary.
- * `folder` est signé : impossible de déposer ailleurs que dans le dossier du site.
+ *
+ * Le dossier est signé : impossible de déposer ailleurs que dans celui du site.
+ * On envoie les deux paramètres de dossier, car Cloudinary en a deux selon le
+ * mode du compte :
+ *   - `folder` — mode « dossiers fixes » (comptes d'avant juin 2024) : place
+ *     l'asset ET préfixe son public_id ;
+ *   - `asset_folder` — mode « dossiers dynamiques » (tous les comptes récents) :
+ *     place l'asset sans toucher au public_id.
+ * Celui qui ne correspond pas au mode du compte est ignoré par Cloudinary.
  */
 function uploadSignature(mime) {
   const timestamp = Math.floor(Date.now() / 1000);
@@ -43,9 +51,20 @@ function uploadSignature(mime) {
     resourceType: resourceType(mime),
     timestamp,
     folder,
-    signature: sign({ folder, timestamp }),
+    assetFolder: folder,
+    signature: sign({ asset_folder: folder, folder, timestamp }),
     endpoint: `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType(mime)}/upload`,
   };
+}
+
+/**
+ * Le média déposé est-il bien dans le dossier du site ? Selon le mode du
+ * compte, la preuve est dans le public_id (dossiers fixes) ou dans le champ
+ * asset_folder de la réponse (dossiers dynamiques).
+ */
+function dansLeDossier(res) {
+  return String(res.public_id || "").startsWith(CLOUDINARY_FOLDER + "/") ||
+    String(res.asset_folder || "") === CLOUDINARY_FOLDER;
 }
 
 /** Supprime définitivement un média sur Cloudinary. */
@@ -90,6 +109,7 @@ module.exports = {
   configured,
   resourceType,
   uploadSignature,
+  dansLeDossier,
   destroy,
   verifyUpload,
   optimized,

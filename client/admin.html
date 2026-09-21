@@ -220,7 +220,8 @@ function uploadFile(file, onProgress) {
       fd2.append("file", file);
       fd2.append("api_key", s.apiKey);
       fd2.append("timestamp", s.timestamp);
-      fd2.append("folder", s.folder);
+      fd2.append("folder", s.folder);          // comptes en dossiers fixes
+      fd2.append("asset_folder", s.assetFolder); // comptes en dossiers dynamiques
       fd2.append("signature", s.signature);
       return postAvecProgression(s.endpoint, fd2, null, onProgress);
     }).then(function (rep) {
