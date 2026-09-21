@@ -63,7 +63,7 @@ router.post("/register", requireAdmin, async (req, res) => {
   if (!cloudinary.verifyUpload(r)) {
     return res.status(400).json({ erreur: "Réponse Cloudinary invalide — envoi refusé" });
   }
-  if (!String(r.public_id).startsWith(cloudinary.folder + "/")) {
+  if (!cloudinary.dansLeDossier(r)) {
     return res.status(400).json({ erreur: "Média hors du dossier du site — envoi refusé" });
   }
   const estVideo = r.resource_type === "video";
