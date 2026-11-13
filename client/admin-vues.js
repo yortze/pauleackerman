@@ -51,7 +51,7 @@
       function dessinerContacts() {
         contacts.innerHTML = "";
         equipe.forEach(function (a) {
-          var c = h('<div class="contact' + (a.agent === actif ? " on" : "") + '" tabindex="0" data-agent="' + a.agent + '">' + ADM.avAgent(a.agent, "lg", a.configure) +
+          var c = h('<div class="contact' + (a.agent === actif ? " on" : "") + '" tabindex="0" data-agent="' + a.agent + '">' + ADM.avAgent(a.agent, "lg", ADM.statutAgent(a).dispo) +
             '<div class="grow"><div class="l1"><b></b><time></time></div><div class="poste"></div><div class="l2"></div></div></div>');
           $(".l1 b", c).textContent = a.prenom;
           $(".l1 time", c).textContent = a.dernier ? ADM.dateRel(a.dernier.date) : "";
@@ -71,12 +71,20 @@
         var a = fiche(agent);
         var meta = ADM.EQUIPE[agent] || {};
         droite.innerHTML = "";
-        var tete = h('<div class="chat-h"><button class="icobtn retour-m" aria-label="Retour">' + ic("arrow-left") + "</button>" + ADM.avAgent(agent, "", a.configure) +
-          '<div class="grow"><b></b><small><span class="dot ' + (a.configure ? "ok" : "ko") + '"></span><span class="st"></span></small></div>' +
+        var tete = h('<div class="chat-h"><button class="icobtn retour-m" aria-label="Retour">' + ic("arrow-left") + "</button>" + ADM.avAgent(agent, "", ADM.statutAgent(a).dispo) +
+          '<div class="grow"><b></b><small><span class="dot"></span><span class="st"></span></small></div>' +
           '<button class="icobtn" data-a="fiche" title="Sa fiche" aria-label="Sa fiche">' + ic("identification-card") + "</button>" +
           '<button class="icobtn" data-a="vider" title="Effacer la conversation" aria-label="Effacer la conversation">' + ic("broom") + "</button></div>");
         $(".grow b", tete).textContent = (a.prenom || meta.prenom) + " · " + (a.poste || meta.poste);
-        $(".st", tete).textContent = a.configure ? "En ligne · " + a.fournisseur + " (" + a.modele + ")" : "Clé " + a.fournisseur + " manquante";
+        function majStatut() {
+          var st = ADM.statutAgent(a);
+          $(".dot", tete).className = "dot " + st.cls;
+          $(".st", tete).textContent = st.dispo ? "En ligne · " + a.fournisseur + " (" + a.modele + ")" :
+            !a.configure ? "Clé " + a.fournisseur + " manquante" : "Budget de tokens du jour atteint · reprend demain";
+          var etat = $(".av .etat", tete);
+          if (etat) etat.classList.toggle("off", !st.dispo);
+        }
+        majStatut();
         $(".retour-m", tete).addEventListener("click", function () { boite.classList.remove("detail"); history.replaceState(null, "", "#equipe"); actif = ""; });
         $('[data-a="fiche"]', tete).addEventListener("click", function () { ouvrirFiche(a); });
         $('[data-a="vider"]', tete).addEventListener("click", function () {
@@ -124,11 +132,12 @@
         setTimeout(function () { if (innerWidth > 900) zone.focus(); }, 60);
 
         function intro() {
-          var p = h('<div class="presente">' + ADM.avAgent(agent, "xl", a.configure) + '<b></b><p></p><div class="meta"></div><div class="idees" style="margin-top:14px"></div></div>');
+          var st = ADM.statutAgent(a);
+          var p = h('<div class="presente">' + ADM.avAgent(agent, "xl", st.dispo) + '<b></b><p></p><div class="meta"></div><div class="idees" style="margin-top:14px"></div></div>');
           $("b", p).textContent = a.prenom + " · " + a.poste;
           $("p", p).textContent = a.presentation || "";
           $(".meta", p).appendChild(h('<span class="pill contour">' + esc(a.fournisseur) + " · " + esc(a.modele || "") + "</span>"));
-          $(".meta", p).appendChild(h('<span class="pill ' + (a.configure ? "ok" : "ko") + '">' + (a.configure ? "Prête" : "Clé manquante") + "</span>"));
+          $(".meta", p).appendChild(h('<span class="pill ' + st.cls + '">' + esc(st.dispo ? "Prête" : st.texte) + "</span>"));
           (a.suggestions || []).forEach(function (s) {
             var b = h("<button></button>");
             b.textContent = s;
@@ -178,6 +187,7 @@
           var texte = zone.value.trim();
           if (!texte || envoiEnCours) return;
           if (!a.configure) { ADM.toast(a.prenom + " attend sa clé " + a.fournisseur + " (voir Réglages).", "ko"); return; }
+          if (!ADM.statutAgent(a).dispo) { ADM.toast(a.prenom + " a utilisé son budget de tokens du jour : elle reprend demain.", "ko"); return; }
           envoiEnCours = true;
           var ctx = contexte;
           bulle({ role: "user", texte: texte, date: new Date().toISOString(), contexte: ctx });
@@ -202,6 +212,10 @@
             ecrit.remove(); note.remove();
             bulle({ role: "assistant", texte: e.message, erreur: true, date: new Date().toISOString() });
             enBas();
+            if (/budget du jour/i.test(e.message || "")) {
+              a.jetonsJour = Math.max(a.jetonsJour || 0, a.limiteJetons || 0);
+              majStatut(); dessinerContacts(); ADM.rafraichirEquipe();
+            }
           }).then(function () { envoiEnCours = false; });
         }
       }
@@ -212,12 +226,12 @@
           prospection: ["Chercher et lire des pages web publiques", "Ajouter et mettre à jour des prospects", "Enregistrer des audits de présence en ligne"],
           agenda: ["Consulter et créer des rendez-vous", "Déplacer, confirmer ou annuler un rendez-vous", "Programmer des relances et changer les étapes"],
         }[a.agent] || [];
-        var corps = h('<div><div class="presente" style="padding-top:18px">' + ADM.avAgent(a.agent, "xl", a.configure) + "<b></b><p></p></div>" +
+        var corps = h('<div><div class="presente" style="padding-top:18px">' + ADM.avAgent(a.agent, "xl", ADM.statutAgent(a).dispo) + "<b></b><p></p></div>" +
           '<section class="sec"><div class="sec-b">' +
           '<div class="ligne" style="padding:8px 0;border:none"><span class="grow muted">Fournisseur</span><b></b></div>' +
           '<div class="ligne" style="padding:8px 0"><span class="grow muted">Modèle</span><b class="mono"></b></div>' +
-          '<div class="ligne" style="padding:8px 0"><span class="grow muted">Tâches aujourd’hui</span><b></b></div>' +
-          '<div class="ligne" style="padding:8px 0"><span class="grow muted">Tâches ce mois</span><b></b></div>' +
+          '<div class="ligne" style="padding:8px 0"><span class="grow muted">Tokens aujourd’hui</span><b></b></div>' +
+          '<div class="ligne" style="padding:8px 0"><span class="grow muted">Tokens ce mois</span><b></b></div>' +
           '<div class="ligne" style="padding:8px 0"><span class="grow muted">Coût estimé ce mois</span><b></b></div>' +
           '</div></section><section class="sec"><div class="sec-h"><h3>' + ic("key") + "Ce qu’elle peut faire</h3></div><div class=\"sec-b\"><ul style=\"margin-left:18px;line-height:1.8\"></ul>" +
           '<p class="muted" style="font-size:12.5px;margin-top:8px">Elle ne supprime rien et n’envoie aucun message à vos clients : c’est vous qui envoyez.</p></div></section></div>');
@@ -226,8 +240,9 @@
         var v = $$(".ligne b", corps);
         v[0].textContent = a.fournisseur;
         v[1].textContent = a.modele || "—";
-        v[2].textContent = a.aujourdhui || 0;
-        v[3].textContent = a.mois || 0;
+        v[2].textContent = (a.jetonsJour || 0).toLocaleString("fr-FR") + " / " + (a.limiteJetons || 0).toLocaleString("fr-FR") +
+          (a.configure && !ADM.statutAgent(a).dispo ? " · atteint, reprend demain" : "");
+        v[3].textContent = (a.jetonsMois || 0).toLocaleString("fr-FR") + " (" + (a.mois || 0) + " tâche" + ((a.mois || 0) > 1 ? "s" : "") + ")";
         v[4].textContent = a.coutMoisUsd != null ? a.coutMoisUsd + " $" : "voir le tableau de bord " + a.fournisseur;
         acces.forEach(function (x) { var li = h("<li></li>"); li.textContent = x; $("ul", corps).appendChild(li); });
         ADM.tiroir("Fiche de " + a.prenom, corps);

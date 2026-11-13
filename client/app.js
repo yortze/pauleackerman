@@ -1292,6 +1292,10 @@
     (D.videos || []).map(fromVideo).forEach(function (it) { ITEMS[it.id] = it; });
     (D.etudes || []).map(fromEtude).forEach(function (it) { ITEMS[it.id] = it; });
     if (P.photo) root.style.setProperty("--photo", "url('" + P.photo + "')");
+    if (P.logo) $$(".sb-mono").forEach(function (mono) {
+      mono.style.background = "#fff url('" + String(P.logo).replace(/'/g, "%27") + "') center/contain no-repeat";
+      mono.textContent = "";
+    });
     if (root.dataset.theme === "dark") { var m = $('meta[name="theme-color"]'); if (m) m.content = "#000000"; }
     $$(".js-handle").forEach(function (n) { n.textContent = user(); });
     $$(".js-name").forEach(function (n) { n.textContent = P.nom || ""; });

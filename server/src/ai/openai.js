@@ -1,25 +1,30 @@
-// OpenAI — utilisé par le diagnostic des demandes clients et par l'assistant
-// agenda & relances (raisonnement, rendez-vous, suivi). Les deux partagent la
-// même clé : OPENAI_API_KEY (ou OPENAI_API_KEY_DIAGNOSTIC / _AGENDA pour une
-// clé dédiée). Modèle : OPENAI_MODEL, par défaut gpt-5.5.
+// OpenAI — utilisé par Nadia (diagnostic des demandes) et Awa (agenda & relances).
+// Leurs tâches sont simples : un modèle léger suffit, avec peu de réflexion.
+//
+// Clé : OPENAI_API_KEY, partagée par les deux (ou OPENAI_API_KEY_DIAGNOSTIC /
+// OPENAI_API_KEY_AGENDA pour une clé dédiée).
+// Modèle : OPENAI_MODEL_DIAGNOSTIC / OPENAI_MODEL_AGENDA, sinon OPENAI_MODEL,
+// sinon gpt-5.4-mini. Réflexion : OPENAI_REASONING_EFFORT (défaut : low).
 //
 // API Responses en mode « sans stockage » (store: false) : les demandes des
 // clients ne sont pas conservées côté OpenAI entre deux appels.
 const { OpenAI } = require("openai");
-const { erreur } = require("./commun");
+const { erreur, verifierPlafond } = require("./commun");
 
-const MODEL = process.env.OPENAI_MODEL || "gpt-5.5";
-const EFFORT = process.env.OPENAI_REASONING_EFFORT || "medium"; // « off » pour un modèle sans raisonnement
-const AVEC_RAISONNEMENT = EFFORT !== "off" && /^(gpt-5|gpt-6|o\d)/.test(MODEL);
+const MODELE_DEFAUT = "gpt-5.4-mini";
+const EFFORT_DEFAUT = "low";
 
-// Coût estimé seulement si les tarifs sont fournis ($ par million de jetons)
+// Coût estimé seulement si les tarifs sont fournis ($ par million de tokens)
 const PRIX_ENTREE = Number(process.env.OPENAI_PRICE_INPUT || 0);
 const PRIX_SORTIE = Number(process.env.OPENAI_PRICE_OUTPUT || 0);
 
 const clients = {};
 function cle(agent) { return process.env["OPENAI_API_KEY_" + agent.toUpperCase()] || process.env.OPENAI_API_KEY || ""; }
 function estConfigure(agent) { return !!cle(agent); }
-function info(agent) { return { configure: estConfigure(agent), modele: MODEL, cleDediee: !!process.env["OPENAI_API_KEY_" + agent.toUpperCase()] }; }
+function modele(agent) { return process.env["OPENAI_MODEL_" + agent.toUpperCase()] || process.env.OPENAI_MODEL || MODELE_DEFAUT; }
+function effort() { return process.env.OPENAI_REASONING_EFFORT || EFFORT_DEFAUT; }
+function avecRaisonnement(agent) { return effort() !== "off" && /^(gpt-5|gpt-6|o\d)/.test(modele(agent)); }
+function info(agent) { return { configure: estConfigure(agent), modele: modele(agent), cleDediee: !!process.env["OPENAI_API_KEY_" + agent.toUpperCase()] }; }
 
 function getClient(agent) {
   const k = cle(agent);
@@ -34,16 +39,18 @@ function cumuler(c, u) {
   c.entree += u.input_tokens || 0;
   c.sortie += u.output_tokens || 0;
   c.cacheLu += (u.input_tokens_details && u.input_tokens_details.cached_tokens) || 0;
+  // Chez OpenAI, les tokens en cache sont déjà inclus dans input_tokens
+  c.jetons += u.total_tokens || (u.input_tokens || 0) + (u.output_tokens || 0);
 }
 function cout(c) {
   if (!PRIX_ENTREE || !PRIX_SORTIE) return null;
   return Math.round(((c.entree * PRIX_ENTREE + c.sortie * PRIX_SORTIE) / 1e6) * 10000) / 10000;
 }
 
-function traduire(e) {
+function traduire(e, agent) {
   if (e instanceof OpenAI.AuthenticationError) return erreur(502, "La clé OpenAI est refusée : vérifiez OPENAI_API_KEY.");
-  if (e instanceof OpenAI.PermissionDeniedError) return erreur(502, "La clé OpenAI n’a pas accès au modèle " + MODEL + ".");
-  if (e instanceof OpenAI.NotFoundError) return erreur(502, "Modèle OpenAI introuvable (" + MODEL + ") : vérifiez OPENAI_MODEL.");
+  if (e instanceof OpenAI.PermissionDeniedError) return erreur(502, "La clé OpenAI n’a pas accès au modèle " + modele(agent) + ".");
+  if (e instanceof OpenAI.NotFoundError) return erreur(502, "Modèle OpenAI introuvable (" + modele(agent) + ") : vérifiez OPENAI_MODEL.");
   if (e instanceof OpenAI.RateLimitError) return erreur(429, "OpenAI reçoit trop de demandes pour ce compte, ou le crédit est épuisé. Réessayez plus tard.");
   if (e instanceof OpenAI.BadRequestError) return erreur(502, "Requête refusée par OpenAI : " + e.message);
   if (e instanceof OpenAI.APIConnectionError) return erreur(502, "Impossible de joindre OpenAI. Réessayez.");
@@ -52,15 +59,16 @@ function traduire(e) {
 }
 
 async function creer(agent, c, params) {
+  verifierPlafond(c);
   let rep;
   try {
     rep = await getClient(agent).responses.create(Object.assign(
-      { model: MODEL, store: false, max_output_tokens: 16000 },
-      AVEC_RAISONNEMENT ? { reasoning: { effort: EFFORT }, include: ["reasoning.encrypted_content"] } : {},
+      { model: modele(agent), store: false, max_output_tokens: 16000 },
+      avecRaisonnement(agent) ? { reasoning: { effort: effort() }, include: ["reasoning.encrypted_content"] } : {},
       params
     ));
   } catch (e) {
-    throw traduire(e);
+    throw traduire(e, agent);
   }
   cumuler(c, rep.usage);
   if (rep.status === "incomplete") {
@@ -123,4 +131,4 @@ async function boucle(agent, c, { instructions, input, tools, executer, maxTours
   throw erreur(504, "L’assistant a dépassé le nombre d’étapes autorisé. Réessayez avec une demande plus ciblée.");
 }
 
-module.exports = { MODEL, estConfigure, info, json, boucle, cout };
+module.exports = { modele, estConfigure, info, json, boucle, cout };
