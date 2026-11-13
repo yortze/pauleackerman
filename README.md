@@ -1,20 +1,34 @@
-# Portfolio Paule Ackerman — site + espace admin
+# Portfolio Paule Ackerman — site + espace pro
 
-Le portfolio est maintenant **full-stack** : le site public (design inchangé) lit son
-contenu depuis une API, et Paule gère tout elle-même depuis **`/admin`** — sans dev.
+Le site public reprend les codes d'Instagram (profil pro, stories à la une, fil,
+Reels, Explorer, messagerie). Paule pilote tout depuis son **espace pro `/admin`** :
+une application avec barre latérale, recherche globale (Ctrl/⌘ K), notifications,
+thème clair/sombre, sur ordinateur comme sur téléphone.
 
-## Ce que Paule peut faire depuis `/admin`
+## L'espace pro (`/admin`)
 
-- **Publications** : ajouter / modifier / supprimer / réordonner les posts du feed
-  (photo, carrousel, vidéo, texte, partage), épingler un post
-- **Créations** : gérer la galerie de visuels (image + titre + étiquette)
-- **Vidéos** : gérer les montages vidéo (fichier + couverture)
-- **Études de cas** : les dossiers détaillés, avec galerie facultative
-- **Registre** : la liste des marques accompagnées
-- **Profil** : photo, bio, stats, contacts, réseaux sociaux, textes de la messagerie
-- **À propos** : parcours, services, outils, langues, certifications, atouts
-- **Messages** : lire les messages envoyés depuis la bulle « Envoyer un message » du site
-- **Réglages** : changer son mot de passe
+**Pilotage**
+- **Accueil** : profil façon réseau social, à faire du jour (relances, rendez-vous,
+  demandes non lues), équipe IA, activité récente, chiffres du site sur 30 jours
+- **Messages** : boîte de réception en deux panneaux ; pour chaque demande : besoin,
+  budget, délai, suivi (étape, montant, relance, notes), analyse IA et brouillons
+  de réponse email/WhatsApp
+- **Équipe IA** : trois assistantes avec qui Paule discute comme avec des contacts
+  (conversations enregistrées) :
+  - **Nadia** (relation client, OpenAI) — analyse les demandes, prépare les réponses
+  - **Yann** (prospection, Claude) — cherche des clients sur le web, audite leur présence en ligne
+  - **Awa** (agenda & relances, OpenAI) — rendez-vous, relances, suivi des contacts
+- **Prospects** : pipeline en colonnes (glisser-déposer), fiche détaillée, audit, message d'approche
+- **Agenda** : vue semaine, disponibilités, réservation d'appel depuis le site
+- **Audience** : visites, sources, appareils, pays, heures de visite, contenus vus,
+  entonnoir de conversion, liens de suivi avec QR code, export CSV (statistiques
+  anonymes : ni cookie, ni IP)
+
+**Mon site** : publications (avec leur vraie date), créations, vidéos, études de cas,
+registre, formules, avis clients, profil, à propos.
+
+**Réglages** : mot de passe, thème, exclusion de ses propres visites, état des alertes
+email et de l'équipe IA.
 
 Les images/vidéos importées depuis l'admin partent sur **Cloudinary** (photo 10 Mo,
 vidéo 100 Mo). Le fichier va directement du navigateur de Paule vers Cloudinary :
@@ -25,8 +39,8 @@ stockage en base (10 Mo max) — pratique en local.
 ## Structure
 
 ```
-client/          site public (index.html + render.js) + admin.html + media/
-server/          API Express (auth JWT, contenu, médias, messages)
+client/          site public (index.html + app.js) + espace pro (admin.html + admin-*.js) + media/
+server/          API Express (auth JWT, contenu, médias, messages, CRM, agenda, audience, IA)
 api/index.js     enveloppe serverless pour Vercel
 sources/         photos d'origine (non publiées)
 ```
@@ -58,6 +72,13 @@ Mot de passe admin par défaut : `paule-admin` (à changer dès la première con
    | `CLOUDINARY_CLOUD_NAME` | *Cloud name* du dashboard Cloudinary |
    | `CLOUDINARY_API_KEY` | *API key* du dashboard Cloudinary |
    | `CLOUDINARY_API_SECRET` | *API secret* du dashboard Cloudinary |
+   | `ANTHROPIC_API_KEY` | clé Claude (console.anthropic.com) — active Yann, la prospection |
+   | `OPENAI_API_KEY` | clé OpenAI (platform.openai.com) — active Nadia et Awa |
+   | `RESEND_API_KEY` + `NOTIFY_EMAIL` | facultatif — email à Paule à chaque demande et rendez-vous |
+
+   Sans clé, l'assistante concernée affiche simplement « clé manquante ». Garde-fou :
+   40 tâches par jour et par assistante (`AI_DAILY_LIMIT`). Les modèles se changent
+   avec `CLAUDE_MODEL` (défaut `claude-opus-5-5`) et `OPENAI_MODEL` (défaut `gpt-5.5`).
 
    Les trois clés Cloudinary se trouvent sur le dashboard, encadré *Product
    Environment Credentials*. On peut aussi coller la seule variable

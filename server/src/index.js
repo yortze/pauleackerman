@@ -53,6 +53,10 @@ async function createApp() {
   app.use("/api/media", media.router);
   app.use("/api/content", contentRouter());
   app.use("/api/messages", messages.router);
+  app.use("/api/crm", require("./routes/crm").router);
+  app.use("/api/crm", require("./routes/equipe").router);
+  app.use("/api/crm", require("./routes/audience").router);
+  app.use("/api", require("./routes/public").router);
 
   // Diagnostic : permet de vérifier après un déploiement que la base et
   // Cloudinary sont bien branchés, sans avoir à se connecter à l'admin.
@@ -60,6 +64,8 @@ async function createApp() {
     ok: true,
     store: store.kind,
     medias: require("./cloudinary").configured ? "cloudinary" : "base",
+    ia: { claude: require("./ai/claude").estConfigure(), openai: require("./ai/openai").estConfigure("agenda") },
+    alertesEmail: !!(process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL),
   }));
 
   // Site statique (index.html, admin.html, médias du dépôt)
