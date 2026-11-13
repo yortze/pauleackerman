@@ -29,6 +29,12 @@
     return '<span class="av ' + (taille || "") + " " + e.cls + '">' + esc(e.prenom.charAt(0)) +
       (enLigne === undefined ? "" : '<span class="etat' + (enLigne ? "" : " off") + '"></span>') + "</span>";
   };
+  /** Statut d'une assistante : clé manquante, budget de tokens du jour atteint, ou disponible. */
+  ADM.statutAgent = function (a) {
+    if (!a || !a.configure) return { cls: "ko", texte: "Clé manquante", dispo: false };
+    if (a.limiteJetons && (a.jetonsJour || 0) >= a.limiteJetons) return { cls: "chaud", texte: "Budget du jour atteint", dispo: false };
+    return { cls: "ok", texte: "En ligne", dispo: true };
+  };
   ADM.avInitiale = function (nom, taille) {
     return '<span class="av initiale ' + (taille || "") + '">' + esc(String(nom || "?").trim().charAt(0).toUpperCase() || "?") + "</span>";
   };
@@ -263,7 +269,7 @@
       var box = $("#sbTeam");
       box.innerHTML = '<div class="sb-sec">Votre équipe</div>';
       liste.forEach(function (a) {
-        var b = h('<a class="sb-agent" href="#equipe/' + a.agent + '">' + ADM.avAgent(a.agent, "sm", a.configure) +
+        var b = h('<a class="sb-agent" href="#equipe/' + a.agent + '">' + ADM.avAgent(a.agent, "sm", ADM.statutAgent(a).dispo) +
           "<span><b></b><small></small></span></a>");
         $("b", b).textContent = a.prenom;
         $("small", b).textContent = a.dernier ? ADM.court(a.dernier.texte, 40) : a.poste;
@@ -464,15 +470,71 @@
   /* ----------------------------------------------------------------------
      Démarrage
   ---------------------------------------------------------------------- */
+  function urlCss(u) { return "url('" + String(u).replace(/'/g, "%27") + "')"; }
+  /** Logo de Paule dans la barre latérale (sinon ses initiales). */
+  ADM.appliquerLogo = function (p) {
+    var l = $(".sb-logo");
+    if (!l) return;
+    if (p && p.logo) { l.classList.add("img"); l.style.backgroundImage = urlCss(p.logo); l.textContent = ""; }
+    else { l.classList.remove("img"); l.style.backgroundImage = ""; l.textContent = "P·A"; }
+  };
   function chargerProfil() {
     return api("/api/profile").then(function (p) {
       ADM.etat.profil = p || {};
       if (p && p.photo) {
-        $("#sbMeAv").style.backgroundImage = "url('" + p.photo.replace(/'/g, "%27") + "')";
+        $("#sbMeAv").style.backgroundImage = urlCss(p.photo);
         $("#sbMeAv").textContent = "";
       }
+      ADM.appliquerLogo(p);
       return p;
     }).catch(function () { return {}; });
+  }
+
+  /** Réglages → Identité de marque : logo, favicon et leurs aperçus. */
+  function sectionMarque(profil) {
+    var s = h('<section class="sec"><div class="sec-h"><h3>' + ic("palette") + "Identité de marque</h3><small>votre logo et votre favicon</small></div>" +
+      '<div class="sec-b"><div class="marque"><div>' +
+      '<label style="margin-top:0">Logo <span class="help">— carré, en PNG à fond transparent ou uni, 512 × 512 px ou plus</span></label><div class="media-field" data-m="logo"></div>' +
+      '<label>Favicon <span class="help">— l’icône de l’onglet ; facultatif, sinon c’est le logo</span></label><div class="media-field" data-m="favicon"></div>' +
+      '<p class="muted" style="font-size:12.5px;margin-top:14px;line-height:1.55">Votre logo devient le favicon de votre site et de cet espace pro, ' +
+      "l’icône affichée quand quelqu’un ajoute votre site à l’écran d’accueil de son téléphone, et le logo de la barre latérale. " +
+      "Les navigateurs gardent parfois l’ancien favicon quelques minutes.</p>" +
+      '<div class="formfoot"><button class="btn primary" data-a="sauver">Enregistrer</button>' +
+      '<a class="btn ghost" href="/" target="_blank" rel="noopener">' + ic("arrow-square-out") + "Voir le site</a></div></div>" +
+      '<div class="apercus">' +
+      '<div><div class="apercu-t">Onglet du navigateur</div><div class="ap-onglets"><div class="ap-onglet"><span class="ap-fav"></span>' +
+      '<span class="t">Paule Ackerman — Community manager</span>' + ic("x") + "</div></div></div>" +
+      '<div><div class="apercu-t">Écran d’accueil du téléphone</div><div class="ap-ecran">' +
+      '<div class="ap-app vide"><span></span>Photos</div><div class="ap-app" data-z="app"><span></span>Paule A.</div><div class="ap-app vide"><span></span>Notes</div></div></div>' +
+      '<div><div class="apercu-t">Barre latérale</div><div class="ap-sb"><span class="sb-logo"></span><span><b>Paule Ackerman</b><small>Espace pro</small></span></div></div>' +
+      "</div></div></div></section>");
+    var mLogo = $('[data-m="logo"]', s), mFav = $('[data-m="favicon"]', s);
+    mediaWidget(mLogo, profil.logo || "", "image/*");
+    mediaWidget(mFav, profil.favicon || "", "image/*");
+    function url(m) { return String(m.dataset.url || "").trim(); }
+    function apercu() {
+      var logo = url(mLogo), fav = url(mFav) || logo;
+      $(".ap-fav", s).style.backgroundImage = fav ? urlCss(fav) : "url('/media/favicon.svg')";
+      $('[data-z="app"] span', s).style.backgroundImage = logo ? urlCss(logo) : "url('/media/favicon.svg')";
+      var sb = $(".ap-sb .sb-logo", s);
+      if (logo) { sb.classList.add("img"); sb.style.backgroundImage = urlCss(logo); sb.textContent = ""; }
+      else { sb.classList.remove("img"); sb.style.backgroundImage = ""; sb.textContent = "P·A"; }
+    }
+    var obs = new MutationObserver(apercu);
+    obs.observe(mLogo, { attributes: true, attributeFilter: ["data-url"] });
+    obs.observe(mFav, { attributes: true, attributeFilter: ["data-url"] });
+    apercu();
+    $('[data-a="sauver"]', s).addEventListener("click", function () {
+      var fin = ADM.attente(this);
+      api("/api/profile", { method: "PUT", body: { logo: url(mLogo), favicon: url(mFav) } }).then(function (p) {
+        fin();
+        ADM.etat.profil = p || {};
+        ADM.appliquerLogo(p);
+        $$('link[rel~="icon"]').forEach(function (l) { l.href = "/api/favicon?v=" + Date.now(); });
+        ADM.toast("Identité enregistrée : favicon et logo mis à jour");
+      }).catch(function (e) { fin(); ADM.toast(e.message, "ko"); });
+    });
+    return s;
   }
 
   window.enter = function () {
@@ -516,6 +578,10 @@
   document.addEventListener("DOMContentLoaded", function () {
     if (TOKEN) api("/api/messages?limite=1").then(function () { window.enter(); }).catch(function () { logout(); });
     else $("#loginView").hidden = false;
+    // Écran de connexion : la photo actuelle de Paule
+    api("/api/profile").then(function (p) {
+      if (p && p.photo) $(".login-av div").style.backgroundImage = urlCss(p.photo);
+    }).catch(function () {});
   });
 
   /* ======================================================================
@@ -572,9 +638,10 @@
         /* --- L'équipe --- */
         var strip = h('<div class="equipe-strip"></div>');
         equipe.forEach(function (a) {
-          var c = h('<a class="employe" href="#equipe/' + a.agent + '"><div class="haut">' + ADM.avAgent(a.agent, "lg", a.configure) +
-            '<div><b></b><small></small></div></div><p></p><div class="bas"><span class="pill ' + (a.configure ? "ok" : "ko") + '">' +
-            (a.configure ? "En ligne" : "Clé manquante") + '</span><span class="pill contour">' + esc(a.fournisseur) + '</span><span class="sp"></span>' +
+          var st = ADM.statutAgent(a);
+          var c = h('<a class="employe" href="#equipe/' + a.agent + '"><div class="haut">' + ADM.avAgent(a.agent, "lg", st.dispo) +
+            '<div><b></b><small></small></div></div><p></p><div class="bas"><span class="pill ' + st.cls + '">' +
+            esc(st.texte) + '</span><span class="pill contour">' + esc(a.fournisseur) + '</span><span class="sp"></span>' +
             '<span class="btn sm soft">' + ic("chat-circle-dots") + "Discuter</span></div></a>");
           $(".haut b", c).textContent = a.prenom;
           $(".haut small", c).textContent = a.poste;
@@ -892,11 +959,12 @@
     titre: "Réglages",
     sous: "Sécurité, apparence, statistiques et équipe",
     rendu: function (params, panel) {
-      Promise.all([api("/api/health"), api("/api/crm/ia").catch(function () { return null; })]).then(function (r) {
-        var sante = r[0], ia = r[1];
+      Promise.all([api("/api/health"), api("/api/crm/ia").catch(function () { return null; }), api("/api/profile").catch(function () { return {}; })]).then(function (r) {
+        var sante = r[0], ia = r[1], profil = r[2] || {};
         var theme = (function () { try { return localStorage.getItem("adm-theme") || "systeme"; } catch (e) { return "systeme"; } })();
         var exclu = (function () { try { return localStorage.getItem("pa_exclure") === "1"; } catch (e) { return false; } })();
         panel.innerHTML = "";
+        panel.appendChild(sectionMarque(profil));
         var g = h('<div class="grille g2"></div>');
 
         var app = h('<section class="sec"><div class="sec-h"><h3>' + ic("circle-half") + "Apparence</h3></div><div class=\"sec-b\">" +
@@ -943,14 +1011,16 @@
         panel.appendChild(g);
 
         if (ia) {
-          var eq = h('<section class="sec"><div class="sec-h"><h3>' + ic("users-three") + 'Équipe IA</h3><small>' + esc(ia.limiteJour) + " tâches par jour et par assistante, au maximum</small></div><div class=\"sec-b flush\"></div></section>");
+          var eq = h('<section class="sec"><div class="sec-h"><h3>' + ic("users-three") + 'Équipe IA</h3><small>' + esc(ADM.nombre(ia.limiteJetons)) + " tokens par jour et par assistante, au maximum</small></div><div class=\"sec-b flush\"></div></section>");
           var vars = { diagnostic: "OPENAI_API_KEY", prospection: "ANTHROPIC_API_KEY", agenda: "OPENAI_API_KEY" };
           Object.keys(ADM.EQUIPE).forEach(function (k) {
             var a = ia.agents[k];
-            var l = h('<a class="ligne cliquable" href="#equipe/' + k + '">' + ADM.avAgent(k, "", a.configure) + '<div class="grow"><b></b><small></small></div>' +
-              '<span class="pill contour">' + esc(a.fournisseur) + "</span>" + (a.configure ? '<span class="pill ok">prête</span>' : '<span class="pill ko">clé manquante</span>') + "</a>");
+            var st = ADM.statutAgent(a);
+            var l = h('<a class="ligne cliquable" href="#equipe/' + k + '">' + ADM.avAgent(k, "", st.dispo) + '<div class="grow"><b></b><small></small></div>' +
+              '<span class="pill contour">' + esc(a.fournisseur) + '</span><span class="pill ' + st.cls + '">' + esc(st.texte) + "</span></a>");
             $("b", l).textContent = ADM.EQUIPE[k].prenom + " · " + a.nom;
-            $("small", l).textContent = a.configure ? "Modèle " + a.modele + " · " + a.aujourdhui + " tâche(s) aujourd’hui · " + a.mois + " ce mois" +
+            $("small", l).textContent = a.configure ? "Modèle " + a.modele + " · " + (a.jetonsJour || 0).toLocaleString("fr-FR") + " / " +
+              (a.limiteJetons || 0).toLocaleString("fr-FR") + " tokens aujourd’hui · " + a.mois + " tâche(s) ce mois" +
               (a.coutMoisUsd != null ? " · environ " + a.coutMoisUsd + " $" : "") : "Ajoutez " + vars[k] + " dans Vercel puis redéployez";
             $(".sec-b", eq).appendChild(l);
           });

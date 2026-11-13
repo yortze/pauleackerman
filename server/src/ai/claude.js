@@ -4,7 +4,7 @@
 // Clé : ANTHROPIC_API_KEY (ou ANTHROPIC_API_KEY_PROSPECTION pour une clé dédiée).
 // Modèle : CLAUDE_MODEL, par défaut claude-opus-5-5.
 const { Anthropic } = require("@anthropic-ai/sdk");
-const { erreur } = require("./commun");
+const { erreur, verifierPlafond } = require("./commun");
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 
@@ -35,6 +35,7 @@ function cumuler(c, usage) {
   c.cacheLu += usage.cache_read_input_tokens || 0;
   c.cacheEcrit += usage.cache_creation_input_tokens || 0;
   c.recherches += (usage.server_tool_use && usage.server_tool_use.web_search_requests) || 0;
+  c.jetons += (usage.input_tokens || 0) + (usage.output_tokens || 0) + (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0);
 }
 function cout(c) {
   const t = TARIFS[MODEL];
@@ -58,6 +59,7 @@ function traduire(e) {
  * sur un autre modèle si le premier refuse pour raison de sécurité.
  */
 async function appeler(c, params) {
+  verifierPlafond(c);
   let rep;
   try {
     rep = await getClient().beta.messages.create(Object.assign({

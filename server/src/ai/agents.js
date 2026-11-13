@@ -55,8 +55,8 @@ const SCHEMA_DIAGNOSTIC = {
 };
 
 async function analyserMessage(message) {
-  await commun.verifierQuota("diagnostic");
-  const c = commun.compteur();
+  const restant = await commun.verifierQuota("diagnostic");
+  const c = commun.compteur(restant);
   const instructions =
     CONTEXTE_PAULE + "\n\n" +
     "Tu es l’assistante de Paule. Tu analyses une demande reçue via le formulaire de son site : besoin réel, problèmes de " +
@@ -82,11 +82,11 @@ async function analyserMessage(message) {
     });
     json.score = Math.max(0, Math.min(100, Math.round(Number(json.score) || 0)));
     json.analyseLe = new Date().toISOString();
-    json.modele = openai.MODEL;
-    await commun.journaliser("diagnostic", "analyse d’une demande", c, true, message.nom, { modele: openai.MODEL, coutUsd: openai.cout(c) });
+    json.modele = openai.modele("diagnostic");
+    await commun.journaliser("diagnostic", "analyse d’une demande", c, true, message.nom, { modele: openai.modele("diagnostic"), coutUsd: openai.cout(c) });
     return json;
   } catch (e) {
-    await commun.journaliser("diagnostic", "analyse d’une demande", c, false, e.message, { modele: openai.MODEL, coutUsd: openai.cout(c) });
+    await commun.journaliser("diagnostic", "analyse d’une demande", c, false, e.message, { modele: openai.modele("diagnostic"), coutUsd: openai.cout(c) });
     throw e;
   }
 }
@@ -129,8 +129,8 @@ const OUTIL_AUDIT = {
 };
 
 async function auditerMarque(cible) {
-  await commun.verifierQuota("prospection");
-  const c = commun.compteur();
+  const restant = await commun.verifierQuota("prospection");
+  const c = commun.compteur(restant);
   const system =
     CONTEXTE_PAULE + "\n\n" +
     "Tu réalises pour Paule un audit rapide de la présence en ligne d’une marque : site, fiche Google, réseaux sociaux visibles. " +
@@ -194,8 +194,8 @@ const OUTIL_PROSPECTS = {
 };
 
 async function prospecter({ secteur, zone, nombre, consignes }) {
-  await commun.verifierQuota("prospection");
-  const c = commun.compteur();
+  const restant = await commun.verifierQuota("prospection");
+  const c = commun.compteur(restant);
   const n = Math.max(1, Math.min(10, Number(nombre) || 5));
   const deja = (await col("prospects").all()).map((p) => p.nom).filter(Boolean);
   const system =
@@ -368,8 +368,8 @@ async function executerAgenda(nom, e) {
 }
 
 async function assistantAgenda(demande, historique) {
-  await commun.verifierQuota("agenda");
-  const c = commun.compteur();
+  const restant = await commun.verifierQuota("agenda");
+  const c = commun.compteur(restant);
   const cfg = await ag.reglages();
   const instructions =
     CONTEXTE_PAULE + "\n\n" +
@@ -394,10 +394,10 @@ async function assistantAgenda(demande, historique) {
   try {
     const r = await openai.boucle("agenda", c, { instructions, input, tools: OUTILS_AGENDA, executer: executerAgenda, maxTours: 10 });
     const coutUsd = openai.cout(c);
-    await commun.journaliser("agenda", "assistant agenda", c, true, String(demande).slice(0, 120), { modele: openai.MODEL, coutUsd });
+    await commun.journaliser("agenda", "assistant agenda", c, true, String(demande).slice(0, 120), { modele: openai.modele("agenda"), coutUsd });
     return { reponse: r.texte || "C’est fait.", actions: r.actions, coutUsd };
   } catch (e) {
-    await commun.journaliser("agenda", "assistant agenda", c, false, e.message, { modele: openai.MODEL, coutUsd: openai.cout(c) });
+    await commun.journaliser("agenda", "assistant agenda", c, false, e.message, { modele: openai.modele("agenda"), coutUsd: openai.cout(c) });
     throw e;
   }
 }
@@ -592,14 +592,14 @@ async function discuter(agent, texte, contexte) {
   if (!fiche) { const e = new Error("Assistant inconnu"); e.status = 404; throw e; }
   texte = String(texte || "").trim().slice(0, 4000);
   if (!texte) { const e = new Error("Écrivez votre message"); e.status = 400; throw e; }
-  await commun.verifierQuota(agent);
+  const restant = await commun.verifierQuota(agent);
 
   const doc = await historique(agent);
   const passe = ((doc && doc.messages) || []).filter((m) => !m.erreur).slice(-16);
   const ctx = await contexteTexte(contexte);
   const maintenant = new Date().toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short", timeZone: "Africa/Libreville" });
   const entete = `[Nous sommes le ${maintenant} (aujourd’hui = ${ag.aujourdhui()}).]\n` + ctx;
-  const c = commun.compteur();
+  const c = commun.compteur(restant);
   let r, modele, coutUsd;
 
   try {
@@ -640,10 +640,15 @@ async function discuter(agent, texte, contexte) {
           input, tools: OUTILS_AGENDA, executer: executerAgenda, maxTours: 10,
         });
       }
-      modele = openai.MODEL; coutUsd = openai.cout(c);
+      modele = openai.modele(agent); coutUsd = openai.cout(c);
     }
   } catch (e) {
-    await commun.journaliser(agent, "discussion", c, false, e.message, { modele, coutUsd: null });
+    // Les tokens consommés avant l'erreur comptent aussi dans le budget et le coût du mois
+    const yann = agent === "prospection";
+    await commun.journaliser(agent, "discussion", c, false, e.message, {
+      modele: yann ? claude.MODEL : openai.modele(agent),
+      coutUsd: yann ? claude.cout(c) : openai.cout(c),
+    });
     throw e;
   }
 
@@ -673,6 +678,7 @@ async function equipe() {
     return Object.assign({ agent: k }, EQUIPE[k], {
       configure: etat.agents[k].configure, modele: etat.agents[k].modele,
       aujourdhui: etat.agents[k].aujourdhui, mois: etat.agents[k].mois, coutMoisUsd: etat.agents[k].coutMoisUsd,
+      jetonsJour: etat.agents[k].jetonsJour, jetonsMois: etat.agents[k].jetonsMois, limiteJetons: etat.agents[k].limiteJetons,
       dernier: msgs.length ? msgs[msgs.length - 1] : null, nbMessages: msgs.length,
     });
   });

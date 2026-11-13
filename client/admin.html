@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#ffffff">
 <title>Espace pro — Paule Ackerman</title>
-<link rel="icon" href="/media/favicon.svg">
+<link rel="icon" href="/api/favicon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..800;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -141,6 +141,7 @@ kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line-2);bord
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);display:inline-block;flex:0 0 auto}
 .dot.ok{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
 .dot.ko{background:var(--bad)}
+.dot.chaud{background:var(--warn)}
 .dot.bleu{background:var(--accent)}
 
 /* ---------- Avatars ---------- */
@@ -275,6 +276,8 @@ kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line-2);bord
 .check{display:flex;align-items:center;gap:9px;margin-top:16px;font-size:13.5px;font-weight:600;color:var(--ink)}
 .media-field{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .media-field img,.media-field video{width:84px;height:84px;object-fit:cover;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface-3)}
+.media-field .btn.ghost{background:var(--surface);border:1px solid var(--line-2);box-shadow:var(--shadow-1);color:var(--ink);align-self:flex-start}
+.media-field .btn.ghost:hover{background:var(--surface-2)}
 .media-empty{width:84px;height:84px;border-radius:var(--r-sm);border:1.5px dashed var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:22px}
 .subrow{border:1px solid var(--line);border-radius:var(--r-sm);padding:2px 14px 14px;margin-bottom:10px;position:relative;background:var(--surface-2)}
 .subrow .rm{position:absolute;top:8px;right:8px}
@@ -567,6 +570,23 @@ button.tuile:hover{border-color:var(--accent-line)}
 .table th.n{text-align:right}
 .qr{display:flex;justify-content:center;padding:10px;background:#fff;border-radius:12px;width:max-content;margin:12px auto}
 
+/* ---------- Identité de marque (logo, favicon) ---------- */
+.marque{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px;align-items:start}
+.apercus{display:flex;flex-direction:column;gap:16px}
+.apercu-t{font-size:11.5px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.ap-onglets{background:var(--surface-3);border-radius:10px;padding:8px 8px 0;display:flex}
+.ap-onglet{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:8px 8px 0 0;padding:9px 12px;font-size:12px;width:100%;min-width:0}
+.ap-onglet .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ap-onglet .ph-duotone{font-size:13px;color:var(--ink-3)}
+.ap-fav{width:16px;height:16px;flex:0 0 auto;background:center/contain no-repeat}
+.ap-ecran{display:flex;gap:18px;padding:18px;border-radius:18px;background:linear-gradient(160deg,#1D3A78,#10172A)}
+.ap-app{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-size:11px}
+.ap-app span{width:60px;height:60px;border-radius:14px;background:#fff center/contain no-repeat;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.ap-app.vide span{background:rgba(255,255,255,.18);box-shadow:none}
+.ap-sb{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.ap-sb b{font-size:14px}.ap-sb small{display:block;font-size:11.5px;color:var(--ink-3)}
+.sb-logo.img{background:#fff center/contain no-repeat;color:transparent;border:1px solid var(--line)}
+
 /* =====================================================================
    Tailles d'écran
 ===================================================================== */
@@ -577,6 +597,7 @@ button.tuile:hover{border-color:var(--accent-line)}
   .inbox{grid-template-columns:320px minmax(0,1fr)}
 }
 @media (max-width:900px){
+  .marque{grid-template-columns:minmax(0,1fr)}
   .sb{transform:translateX(-100%);transition:transform .22s ease;box-shadow:var(--shadow-3)}
   .app.menu-ouvert .sb{transform:none}
   .app.menu-ouvert .sb-voile{display:block;position:fixed;inset:0;z-index:35;background:rgba(10,14,24,.4)}
@@ -907,7 +928,7 @@ var SCHEMAS = {
 
 var PROFILE_SCHEMA = {
   label: "Profil",
-  aide: "La carte de profil, la photo, les contacts et les réseaux — visibles partout sur le site.",
+  aide: "La carte de profil, la photo, les contacts et les réseaux — visibles partout sur le site. Votre logo et votre favicon se règlent dans Réglages → Identité de marque.",
   champs: [
     { k: "photo", label: "Photo de profil", type: "media" },
     { k: "nom", label: "Nom affiché", type: "text" },
@@ -1268,8 +1289,8 @@ function dateCourte(iso) {
 }
 
 </script>
-<script src="/admin-app.js?v=2026-11-13c"></script>
-<script src="/admin-vues.js?v=2026-11-13b"></script>
+<script src="/admin-app.js?v=2026-11-14b"></script>
+<script src="/admin-vues.js?v=2026-11-14"></script>
 <script src="/admin-audience.js?v=2026-11-13c"></script>
 </body>
 </html>
