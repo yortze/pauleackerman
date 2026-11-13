@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const { col } = require("../store");
 const { requireAdmin } = require("../middleware/auth");
 const { JWT_SECRET } = require("../config");
+const { notifier } = require("../notify");
 
 const router = express.Router();
 
@@ -24,6 +25,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function empreinte(req) {
   const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.ip || "inconnue";
   return crypto.createHmac("sha256", JWT_SECRET).update(ip).digest("hex").slice(0, 32);
+}
+
+/** Réponse d'une liste déroulante du formulaire (besoin, budget, délai). */
+function champCourt(v) {
+  return String(v || "").replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
 /** Compte les liens d'un message — au-delà de 3, on marque comme spam probable. */
@@ -77,7 +83,7 @@ async function verifieLimites(cle) {
    Envoi public
 ============================================================================ */
 router.post("/", async (req, res) => {
-  const { nom, email, message, website, ouvertureTs } = req.body || {};
+  const { nom, email, message, website, ouvertureTs, telephone, besoin, budget, delai } = req.body || {};
 
   // Honeypot : le champ "website" est invisible pour les humains
   if (website) return res.status(201).json({ ok: true }); // on fait semblant
@@ -96,16 +102,33 @@ router.post("/", async (req, res) => {
   if (!mail) return res.status(400).json({ erreur: "Laissez votre email pour que Paule puisse vous répondre" });
   if (!EMAIL_RE.test(mail) || mail.length > 200) return res.status(400).json({ erreur: "Email invalide" });
 
+  const tel = String(telephone || "").replace(/[^\d+ ().-]/g, "").trim().slice(0, 30);
+  if (tel && tel.replace(/\D/g, "").length < 8) {
+    return res.status(400).json({ erreur: "Ce numéro semble incomplet — vérifiez-le ou laissez le champ vide" });
+  }
+
   const limite = await verifieLimites(empreinte(req));
   if (limite) return res.status(limite.code).json({ erreur: limite.erreur });
 
   const doc = await col("messages").insert({
     nom: String(nom || "").trim().slice(0, 120) || "Anonyme",
     email: mail,
+    telephone: tel,
+    besoin: champCourt(besoin),
+    budget: champCourt(budget),
+    delai: champCourt(delai),
     message: txt,
     lu: false,
     spam: compteLiens(txt) > 3,
+    statut: "nouveau",
   });
+  if (!doc.spam) {
+    await notifier(
+      `Nouvelle demande : ${doc.nom}${doc.besoin ? " — " + doc.besoin : ""}`,
+      `${doc.nom} (${doc.email}${doc.telephone ? ", " + doc.telephone : ""}) vous a écrit depuis le site.\n` +
+      (doc.besoin ? `\nBesoin : ${doc.besoin}` : "") + (doc.budget ? `\nBudget : ${doc.budget}` : "") + (doc.delai ? `\nDélai : ${doc.delai}` : "") +
+      `\n\n${doc.message}`);
+  }
   res.status(201).json({ ok: true, id: doc._id });
 });
 
@@ -127,11 +150,12 @@ router.get("/", requireAdmin, async (req, res) => {
   if (filtre === "nonlus") docs = docs.filter((d) => !d.lu);
   else if (filtre === "lus") docs = docs.filter((d) => d.lu);
   else if (filtre === "spam") docs = docs.filter((d) => d.spam);
+  if (STATUTS_MESSAGE.indexOf(req.query.statut) !== -1) docs = docs.filter((d) => !d.spam && (d.statut || "nouveau") === req.query.statut);
 
   const recherche = String(q).trim().toLowerCase();
   if (recherche) {
     docs = docs.filter((d) =>
-      [d.nom, d.email, d.message].some((v) => String(v || "").toLowerCase().includes(recherche)));
+      [d.nom, d.email, d.telephone, d.besoin, d.message].some((v) => String(v || "").toLowerCase().includes(recherche)));
   }
 
   const filtres = docs.length;
@@ -146,10 +170,19 @@ router.get("/", requireAdmin, async (req, res) => {
   });
 });
 
-// Marquer lu / non lu
+// Mise à jour par Paule : lu / non lu, étape du suivi, notes, relance, montant
+const STATUTS_MESSAGE = ["nouveau", "en_discussion", "devis_envoye", "gagne", "perdu"];
 router.put("/:id", requireAdmin, async (req, res) => {
-  const lu = !!(req.body && req.body.lu);
-  const doc = await col("messages").update(req.params.id, { lu });
+  const b = req.body || {};
+  const patch = {};
+  if (b.lu !== undefined) patch.lu = !!b.lu;
+  if (b.spam !== undefined) patch.spam = !!b.spam;
+  if (STATUTS_MESSAGE.indexOf(b.statut) !== -1) patch.statut = b.statut;
+  if (b.notes !== undefined) patch.notes = String(b.notes).slice(0, 5000);
+  if (b.relanceLe !== undefined) patch.relanceLe = /^\d{4}-\d{2}-\d{2}$/.test(b.relanceLe) ? b.relanceLe : "";
+  if (b.relanceNote !== undefined) patch.relanceNote = String(b.relanceNote).slice(0, 500);
+  if (b.valeur !== undefined) patch.valeur = Math.max(0, Number(b.valeur) || 0);
+  const doc = await col("messages").update(req.params.id, patch);
   if (!doc) return res.status(404).json({ erreur: "Introuvable" });
   res.json(doc);
 });

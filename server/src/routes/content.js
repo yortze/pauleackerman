@@ -4,7 +4,7 @@ const express = require("express");
 const { col } = require("../store");
 const { requireAdmin } = require("../middleware/auth");
 
-const COLLECTIONS = ["posts", "creations", "videos", "etudes", "registre"];
+const COLLECTIONS = ["posts", "creations", "videos", "etudes", "registre", "formules", "avis"];
 
 function contentRouter() {
   const router = express.Router();
@@ -29,6 +29,10 @@ function contentRouter() {
 
   router.post("/:collection", requireAdmin, async (req, res) => {
     if (!req.body || typeof req.body !== "object") return res.status(400).json({ erreur: "Corps invalide" });
+    // Une publication porte toujours sa vraie date : aujourd'hui (Libreville) par défaut
+    if (req.params.collection === "posts" && !/^\d{4}-\d{2}-\d{2}$/.test(req.body.publieLe || "")) {
+      req.body.publieLe = new Date(Date.now() + 3600000).toISOString().slice(0, 10);
+    }
     res.status(201).json(await req.collection.insert(req.body));
   });
 

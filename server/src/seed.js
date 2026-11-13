@@ -11,6 +11,8 @@ const profile = {
   bio: "— passionnée de communication digitale, je fais rayonner votre identité en ligne. Création de contenu, montage vidéo & gestion de communautés.",
   localisation: "Libreville, Gabon",
   telephone: "076 21 51 55",
+  whatsapp: "+241 076 21 51 55",
+  whatsappMessage: "Bonjour Paule, j'ai vu votre portfolio et j'aimerais parler de mon projet.",
   email: "roxanebillie@gmail.com",
   photo: "/media/asset-01-90d3c5eb78.jpg",
   stats: [
@@ -244,15 +246,58 @@ const registre = [
   { ordre: 5, initiale: "C", nom: "CECA GADIS", badge: "", detail: "Owendo · Assistante informatique", periode: "2022" },
 ];
 
+// Formules proposées aux clients. Les prix sont à fixer par Paule depuis l'admin.
+const formules = [
+  {
+    ordre: 1,
+    titre: "Visuels à la carte",
+    accroche: "Pour un lancement, une promo ou un événement ponctuel.",
+    prix: "Sur devis",
+    periode: "",
+    inclus: ["Affiches, flyers et visuels pour les réseaux", "Déclinaisons aux formats Instagram, Facebook et TikTok", "2 séries de retouches incluses"],
+    miseEnAvant: false,
+  },
+  {
+    ordre: 2,
+    titre: "Gestion des réseaux sociaux",
+    accroche: "Je prends en main votre présence en ligne, chaque mois.",
+    prix: "Sur devis",
+    periode: "par mois",
+    inclus: ["Calendrier éditorial et publications régulières", "Création de visuels et de vidéos courtes", "Animation et modération de la communauté", "Bilan mensuel des chiffres clés (portée, engagement)"],
+    miseEnAvant: true,
+  },
+  {
+    ordre: 3,
+    titre: "Identité visuelle",
+    accroche: "Pour une nouvelle marque ou une marque qui veut changer d'image.",
+    prix: "Sur devis",
+    periode: "",
+    inclus: ["Logo et ses déclinaisons", "Palette de couleurs et typographies", "Mini-charte graphique prête à l'emploi"],
+    miseEnAvant: false,
+  },
+];
+
+// Avis clients : vides au départ, Paule les ajoute depuis l'admin (jamais d'avis inventés).
+const avis = [];
+
 async function seed() {
   for (const [key, doc] of [["profile", profile], ["apropos", apropos]]) {
     if (!(await col("settings").findOne({ key }))) await col("settings").insert(doc);
   }
-  const collections = { posts, creations, videos, etudes, registre };
+  const collections = { posts, creations, videos, etudes, registre, formules, avis };
   for (const [name, docs] of Object.entries(collections)) {
     if ((await col(name).count()) === 0) {
       for (const d of docs) await col(name).insert(d);
       console.log(`[seed] ${name} : ${docs.length} éléments`);
+    }
+  }
+
+  // Dates réelles : une publication sans date de publication reçoit celle de
+  // sa mise en ligne sur le site (modifiable ensuite depuis l'admin).
+  for (const p of await col("posts").all()) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.publieLe || "")) {
+      const d = p.createdAt ? new Date(p.createdAt) : new Date();
+      await col("posts").update(p._id, { publieLe: new Date(d.getTime() + 3600000).toISOString().slice(0, 10) });
     }
   }
 }
