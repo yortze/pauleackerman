@@ -80,7 +80,9 @@ retrouve tout de suite et peut écrire à Paule sans quitter la page.
 |---|---|---|
 | **Nadia** | Analyse chaque demande et prépare la réponse par email ou WhatsApp | OpenAI (léger) |
 | **Yann** | Cherche des entreprises sur le web et audite leur présence en ligne pour trouver de nouveaux clients | Claude |
-| **Awa** | Gère l'agenda, les rendez-vous et les relances | OpenAI (léger) |
+| **Awa** | Bras droit : agenda et relances, conseil sur les prix, les marges et les attentes des clients, bloc-notes des tâches | OpenAI (léger) |
+
+Paule peut aussi les réunir en **débrief d'équipe** sur un client : chacune donne son avis, puis Awa fait la synthèse et note les tâches à faire.
 
 Un budget d'un million de tokens par jour et par assistante garde la facture sous contrôle.
 
