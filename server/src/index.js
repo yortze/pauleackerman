@@ -84,6 +84,7 @@ async function createApp() {
     medias: require("./cloudinary").configured ? "cloudinary" : "base",
     ia: { claude: require("./ai/claude").estConfigure(), openai: require("./ai/openai").estConfigure("agenda") },
     alertesEmail: !!(process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL),
+    googleAgenda: require("./googleAgenda").configure(),
   }));
 
   // Site statique (index.html, admin.html, médias du dépôt)

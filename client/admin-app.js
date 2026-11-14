@@ -344,7 +344,7 @@
     var c = [
       { g: "Actions", icone: "chat-circle-dots", titre: "Discuter avec Nadia", sous: "Relation client", action: function () { ADM.aller("equipe/diagnostic"); } },
       { g: "Actions", icone: "chat-circle-dots", titre: "Discuter avec Yann", sous: "Prospection", action: function () { ADM.aller("equipe/prospection"); } },
-      { g: "Actions", icone: "chat-circle-dots", titre: "Discuter avec Awa", sous: "Agenda & relances", action: function () { ADM.aller("equipe/agenda"); } },
+      { g: "Actions", icone: "chat-circle-dots", titre: "Discuter avec Awa", sous: "Agenda, conseil et bloc-notes", action: function () { ADM.aller("equipe/agenda"); } },
       { g: "Actions", icone: "calendar-plus", titre: "Nouveau rendez-vous", action: function () { if (ADM.nouveauRdv) ADM.nouveauRdv(); else ADM.aller("agenda"); } },
       { g: "Actions", icone: "plus-square", titre: "Nouvelle publication", action: function () { ADM.aller("site/posts/nouveau"); } },
       { g: "Actions", icone: "magnifying-glass-plus", titre: "Trouver des prospects", action: function () { ADM.aller("prospects/trouver"); } },
@@ -955,12 +955,74 @@
   /* ======================================================================
      RÉGLAGES
   ====================================================================== */
+  /* Google Agenda : les rendez-vous s'ajoutent à l'agenda de Paule (notifications de Google) */
+  function sectionGoogle(e) {
+    var etat = !e.configure ? (e.compteInvalide ? ["ko", "à corriger"] : ["ko", "non configuré"])
+      : e.dernier && !e.dernier.ok ? ["ko", "erreur"] : ["ok", "connecté"];
+    var s = h('<section class="sec"><div class="sec-h"><h3>' + ic("calendar-check") + 'Google Agenda</h3><span class="pill ' + etat[0] + '"></span></div><div class="sec-b"></div></section>');
+    $(".pill", s).textContent = etat[1];
+    var b = $(".sec-b", s);
+    function para(t, style) { var p = h('<p class="muted" style="font-size:13px;line-height:1.6;' + (style || "") + '"></p>'); p.textContent = t; b.appendChild(p); return p; }
+    function ligneInfo(lib, val, copie) {
+      var l = h('<div class="ligne" style="padding:8px 0;border-top:none"><span class="muted" style="min-width:150px"></span><b class="grow mono" style="word-break:break-all;font-size:12.5px"></b></div>');
+      $("span", l).textContent = lib;
+      $("b", l).textContent = val;
+      if (copie) {
+        var c = h('<button class="btn sm ghost">' + ic("copy") + "Copier</button>");
+        c.addEventListener("click", function () { ADM.copier(val, c); });
+        l.appendChild(c);
+      }
+      b.appendChild(l);
+    }
+    if (e.configure) {
+      para("Vos rendez-vous s’ajoutent à votre Google Agenda dès qu’ils sont pris sur le site, créés par Awa ou ajoutés ici. Ils sont mis à jour s’ils sont déplacés et retirés s’ils sont annulés. " +
+        "Les notifications viennent de Google Agenda : réglez-les dans ses paramètres, par exemple 30 minutes et 1 jour avant.");
+      ligneInfo("Agenda", e.calendrier);
+      ligneInfo("Compte de service", e.compteService, true);
+    } else {
+      para("Recevez vos rendez-vous dans Google Agenda, avec ses notifications sur votre téléphone et dans Chrome. Mise en place, une seule fois :");
+      var ol = h('<ol style="margin:8px 0 4px 20px;font-size:13px;line-height:1.7;color:var(--ink-2)"></ol>');
+      ["Sur console.cloud.google.com, créez un projet et activez « Google Calendar API ».",
+        "Dans IAM et administration → Comptes de service, créez un compte de service, puis une clé au format JSON.",
+        "Dans Google Agenda, partagez votre agenda avec l’adresse du compte de service, droit « Apporter des modifications aux événements ».",
+        "Dans Vercel → Settings → Environment Variables, ajoutez GOOGLE_CALENDAR_ID (votre adresse Gmail) et GOOGLE_SERVICE_ACCOUNT (le contenu du fichier JSON), puis redéployez."]
+        .forEach(function (t) { var li = h("<li></li>"); li.textContent = t; ol.appendChild(li); });
+      b.appendChild(ol);
+      if (e.compteInvalide) para("GOOGLE_SERVICE_ACCOUNT est présent mais illisible : collez tout le contenu du fichier JSON téléchargé.", "color:var(--bad)");
+      if (e.compteService) ligneInfo("Adresse à ajouter au partage", e.compteService, true);
+    }
+    var entame = e.configure || e.compteService || e.compteInvalide || e.calendrier;
+    if (entame && e.dernier && e.dernier.message) {
+      var d = h('<div class="hint ' + (e.dernier.ok ? "ok" : "alerte") + '" style="margin:12px 0 0">' + ic(e.dernier.ok ? "check-circle" : "warning-circle") + "<div></div></div>");
+      $("div", d).textContent = e.dernier.message + (e.dernier.date ? " · " + ADM.dateRel(e.dernier.date) : "");
+      b.appendChild(d);
+    }
+    var pied = h('<div class="formfoot" style="margin-top:14px;gap:8px;flex-wrap:wrap"></div>');
+    function bouton(libelle, icone, url, cls) {
+      var x = h('<button class="btn ' + (cls || "") + '">' + ic(icone) + "<span></span></button>");
+      $("span", x).textContent = libelle;
+      x.addEventListener("click", function () {
+        x.disabled = true;
+        api(url, { method: "POST" }).then(function (res) {
+          ADM.toast(res.message, res.ok ? "" : "ko");
+          return api("/api/crm/google-agenda").then(function (e2) { s.replaceWith(sectionGoogle(e2)); });
+        }).catch(function (er) { x.disabled = false; ADM.toast(er.message, "ko"); });
+      });
+      pied.appendChild(x);
+    }
+    if (e.configure) bouton("Envoyer les rendez-vous à venir", "arrows-clockwise", "/api/crm/google-agenda/synchroniser", "soft");
+    if (entame) bouton("Tester la connexion", "plugs-connected", "/api/crm/google-agenda/tester", e.configure ? "" : "soft");
+    if (pied.children.length) b.appendChild(pied);
+    return s;
+  }
+
   ADM.vue("reglages", {
     titre: "Réglages",
-    sous: "Sécurité, apparence, statistiques et équipe",
+    sous: "Sécurité, apparence, agenda et équipe",
     rendu: function (params, panel) {
-      Promise.all([api("/api/health"), api("/api/crm/ia").catch(function () { return null; }), api("/api/profile").catch(function () { return {}; })]).then(function (r) {
-        var sante = r[0], ia = r[1], profil = r[2] || {};
+      Promise.all([api("/api/health"), api("/api/crm/ia").catch(function () { return null; }), api("/api/profile").catch(function () { return {}; }),
+        api("/api/crm/google-agenda").catch(function () { return null; })]).then(function (r) {
+        var sante = r[0], ia = r[1], profil = r[2] || {}, google = r[3];
         var theme = (function () { try { return localStorage.getItem("adm-theme") || "systeme"; } catch (e) { return "systeme"; } })();
         var exclu = (function () { try { return localStorage.getItem("pa_exclure") === "1"; } catch (e) { return false; } })();
         panel.innerHTML = "";
@@ -1009,6 +1071,7 @@
           '<span class="mono">RESEND_API_KEY</span> (clé du service Resend) et <span class="mono">NOTIFY_EMAIL</span> (votre adresse), puis redéployez.</p></div></section>');
         g.appendChild(alerte);
         panel.appendChild(g);
+        if (google) panel.appendChild(sectionGoogle(google));
 
         if (ia) {
           var eq = h('<section class="sec"><div class="sec-h"><h3>' + ic("users-three") + 'Équipe IA</h3><small>' + esc(ADM.nombre(ia.limiteJetons)) + " tokens par jour et par assistante, au maximum</small></div><div class=\"sec-b flush\"></div></section>");

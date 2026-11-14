@@ -12,7 +12,7 @@ const LIMITE_JETONS = Math.max(1000, Number(process.env.AI_DAILY_TOKENS || 10000
 const AGENTS = {
   diagnostic: { nom: "Diagnostic clients", prenom: "Nadia", fournisseur: "OpenAI" },
   prospection: { nom: "Prospection & audits", prenom: "Yann", fournisseur: "Claude" },
-  agenda: { nom: "Agenda & relances", prenom: "Awa", fournisseur: "OpenAI" },
+  agenda: { nom: "Agenda & conseil", prenom: "Awa", fournisseur: "OpenAI" },
 };
 
 function erreur(code, message) {

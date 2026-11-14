@@ -20,7 +20,8 @@ Installation, déploiement et fonctionnement interne du portfolio. La présentat
     Awa fait la synthèse (grands points, à faire). « @Nadia », « @Yann » ou « @Awa » : seule la personne citée répond
   - **Bloc-notes** : tâches à faire (client, échéance), cochées par Paule ou par Awa
 - **Prospects** : pipeline en colonnes (glisser-déposer), fiche détaillée, audit, message d'approche
-- **Agenda** : vue semaine, disponibilités, réservation d'appel depuis le site
+- **Agenda** : vue semaine, disponibilités, réservation d'appel depuis le site. Chaque rendez-vous
+  peut s'ajouter tout seul à son Google Agenda, avec ses notifications (voir plus bas)
 - **Audience** : visites, sources, appareils, pays, heures de visite, contenus vus,
   entonnoir de conversion, liens de suivi avec QR code, export CSV (statistiques
   anonymes : ni cookie, ni IP)
@@ -28,7 +29,7 @@ Installation, déploiement et fonctionnement interne du portfolio. La présentat
 **Mon site** : publications (avec leur vraie date), créations, vidéos, études de cas,
 registre, formules, avis clients, profil, à propos.
 
-**Réglages** : mot de passe, thème, exclusion de ses propres visites, état des alertes
+**Réglages** : mot de passe, thème, exclusion de ses propres visites, Google Agenda, état des alertes
 email et de l'équipe IA.
 
 Les images/vidéos importées depuis l'admin partent sur **Cloudinary** (photo 10 Mo,
@@ -76,6 +77,7 @@ Mot de passe admin par défaut : `paule-admin` (à changer dès la première con
    | `ANTHROPIC_API_KEY` | clé Claude (console.anthropic.com) — active Yann, la prospection |
    | `OPENAI_API_KEY` | clé OpenAI (platform.openai.com) — active Nadia et Awa |
    | `RESEND_API_KEY` + `NOTIFY_EMAIL` | facultatif — email à Paule à chaque demande et rendez-vous |
+   | `GOOGLE_CALENDAR_ID` + `GOOGLE_SERVICE_ACCOUNT` | facultatif — rendez-vous ajoutés à son Google Agenda (voir plus bas) |
 
    Sans clé, l'assistante concernée affiche simplement « clé manquante ». Garde-fou :
    1 million de tokens par jour et par assistante (`AI_DAILY_TOKENS`) ; une tâche
@@ -98,6 +100,34 @@ Mot de passe admin par défaut : `paule-admin` (à changer dès la première con
 
 Au premier démarrage, le contenu actuel du portfolio est injecté automatiquement
 dans la base (seed). Ensuite, tout se gère depuis l'admin.
+
+## Google Agenda (facultatif)
+
+Chaque rendez-vous (réservé sur le site, créé par Awa ou ajouté dans l'admin) est
+ajouté au Google Agenda de Paule, mis à jour s'il est déplacé ou confirmé, et retiré
+s'il est annulé ou supprimé. Les notifications sont celles de Google Agenda, sur son
+téléphone et dans Chrome. Mise en place, une seule fois :
+
+1. Sur [console.cloud.google.com](https://console.cloud.google.com), créer un projet
+   et activer **Google Calendar API** (API et services → Bibliothèque).
+2. *IAM et administration → Comptes de service* : créer un compte de service, puis
+   dans son onglet *Clés*, ajouter une clé au format **JSON** (un fichier se télécharge).
+3. Dans Google Agenda : *Paramètres et partage* de l'agenda → *Partager avec des
+   personnes spécifiques* → ajouter l'adresse du compte de service (`…@….iam.gserviceaccount.com`)
+   avec le droit **Apporter des modifications aux événements**.
+4. Dans Vercel : `GOOGLE_CALENDAR_ID` = l'adresse Gmail de Paule, et
+   `GOOGLE_SERVICE_ACCOUNT` = le contenu du fichier JSON (tel quel, ou encodé en base64).
+   Redéployer.
+5. Dans l'admin, *Réglages → Google Agenda* : **Tester la connexion**, puis
+   **Envoyer les rendez-vous à venir** pour ajouter ceux qui existaient déjà.
+6. Dans Google Agenda, régler les *Notifications d'événements* de l'agenda
+   (par exemple 30 minutes et 1 jour avant), et autoriser les notifications de
+   l'app Google Agenda sur le téléphone et de calendar.google.com dans Chrome.
+
+Chaque événement a un identifiant tiré de celui du rendez-vous : rien de plus n'est
+stocké, et renvoyer un rendez-vous ne crée jamais de doublon. Une erreur de Google ne
+bloque jamais une réservation ; elle s'affiche dans Réglages avec la marche à suivre.
+`/api/health` indique `googleAgenda: true` quand les deux variables sont présentes.
 
 ## Notes techniques
 

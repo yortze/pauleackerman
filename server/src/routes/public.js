@@ -6,6 +6,7 @@ const { col } = require("../store");
 const { JWT_SECRET } = require("../config");
 const ag = require("../agenda");
 const { notifier } = require("../notify");
+const gagenda = require("../googleAgenda");
 
 const router = express.Router();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -52,6 +53,7 @@ router.post("/rdv/reserver", async (req, res) => {
       avec: nom, email, telephone: tel, debut: d.toISOString(), dureeMin: cfg.dureeAppel,
       lieu: cfg.lieuAppel || "", notes: String(b.objet || "").slice(0, 1000), statut: "a_confirmer", source: "site",
     });
+    await gagenda.synchroniser(rdv);
     await notifier(`Nouveau rendez-vous : ${nom}, ${ag.libelleDate(d)}`,
       `${nom} (${email}${tel ? ", " + tel : ""}) a réservé un appel découverte le ${ag.libelleDate(d)} (${cfg.dureeAppel} min).` +
       (b.objet ? `\n\nSon projet : ${b.objet}` : "") + "\n\nPensez à confirmer le rendez-vous dans l'onglet Agenda.");

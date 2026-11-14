@@ -4,6 +4,7 @@
 //   3. Agenda (OpenAI)      : programme rendez-vous et relances, fait avancer le suivi des contacts.
 const { col } = require("../store");
 const ag = require("../agenda");
+const gagenda = require("../googleAgenda");
 const commun = require("./commun");
 const claude = require("./claude");
 const openai = require("./openai");
@@ -322,6 +323,7 @@ async function executerAgenda(nom, e) {
       lieu: e.lieu || "", email: e.email || "", telephone: e.telephone || "", notes: e.notes || "",
       statut: "confirme", source: "assistant IA",
     });
+    await gagenda.synchroniser(r);
     return rdvPublic(r);
   }
   if (nom === "modifier_rdv") {
@@ -337,7 +339,9 @@ async function executerAgenda(nom, e) {
     if (e.dureeMin) patch.dureeMin = Math.max(5, Math.min(480, e.dureeMin));
     ["titre", "lieu", "notes"].forEach((k) => { if (e[k] != null) patch[k] = e[k]; });
     if (e.statut) patch.statut = e.statut;
-    return rdvPublic(await col("rendezvous").update(e.id, patch));
+    const maj = await col("rendezvous").update(e.id, patch);
+    await gagenda.synchroniser(maj);
+    return rdvPublic(maj);
   }
   if (nom === "chercher_contact") {
     const q = String(e.recherche || "").toLowerCase().trim();

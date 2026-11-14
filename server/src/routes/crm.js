@@ -5,6 +5,7 @@ const { col } = require("../store");
 const { requireAdmin } = require("../middleware/auth");
 const ag = require("../agenda");
 const agents = require("../ai/agents");
+const gagenda = require("../googleAgenda");
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -131,7 +132,9 @@ router.post("/rdv", enveloppe(async (req, res) => {
   if (ag.chevauche(new Date(o.debut).getTime(), new Date(o.debut).getTime() + o.dureeMin * 60000, await ag.rdvActifs())) {
     return res.status(409).json({ erreur: "Ce créneau chevauche un autre rendez-vous" });
   }
-  res.status(201).json(await col("rendezvous").insert(Object.assign({ statut: "confirme", source: "manuel", titre: "Rendez-vous" }, o)));
+  const r = await col("rendezvous").insert(Object.assign({ statut: "confirme", source: "manuel", titre: "Rendez-vous" }, o));
+  await gagenda.synchroniser(r);
+  res.status(201).json(r);
 }));
 router.put("/rdv/:id", enveloppe(async (req, res) => {
   const o = nettoyerRdv(req.body || {}, true);
@@ -144,11 +147,19 @@ router.put("/rdv/:id", enveloppe(async (req, res) => {
   }
   const d = await col("rendezvous").update(req.params.id, o);
   if (!d) return res.status(404).json({ erreur: "Introuvable" });
+  await gagenda.synchroniser(d);
   res.json(d);
 }));
 router.delete("/rdv/:id", enveloppe(async (req, res) => {
-  res.json({ ok: await col("rendezvous").remove(req.params.id) });
+  const ok = await col("rendezvous").remove(req.params.id);
+  if (ok) await gagenda.retirer(req.params.id);
+  res.json({ ok });
 }));
+
+/* Google Agenda : état, test de connexion, envoi des rendez-vous à venir */
+router.get("/google-agenda", enveloppe(async (_req, res) => res.json(await gagenda.etat())));
+router.post("/google-agenda/tester", enveloppe(async (_req, res) => res.json(await gagenda.tester())));
+router.post("/google-agenda/synchroniser", enveloppe(async (_req, res) => res.json(await gagenda.toutSynchroniser())));
 
 router.get("/agenda-reglages", enveloppe(async (_req, res) => res.json(await ag.reglages())));
 router.put("/agenda-reglages", enveloppe(async (req, res) => {
