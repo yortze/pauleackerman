@@ -22,7 +22,7 @@
   ADM.EQUIPE = {
     diagnostic: { prenom: "Nadia", cls: "nadia", poste: "Relation client" },
     prospection: { prenom: "Yann", cls: "yann", poste: "Développement commercial" },
-    agenda: { prenom: "Awa", cls: "awa", poste: "Assistante de direction" },
+    agenda: { prenom: "Awa", cls: "awa", poste: "Bras droit · agenda et conseil" },
   };
   ADM.avAgent = function (agent, taille, enLigne) {
     var e = ADM.EQUIPE[agent] || { prenom: "?", cls: "" };

@@ -14,14 +14,14 @@
     creneaux_libres: "a vérifié vos créneaux", creer_rdv: "a créé un rendez-vous", modifier_rdv: "a modifié un rendez-vous",
     lister_relances: "a consulté les relances", programmer_relance: "a programmé une relance", changer_statut: "a changé une étape",
     lister_prospects: "a consulté vos prospects", enregistrer_prospects: "a ajouté des prospects", mettre_a_jour_prospect: "a mis à jour un prospect",
-    enregistrer_audit: "a enregistré un audit",
+    enregistrer_audit: "a enregistré un audit", lister_notes: "a lu le bloc-notes", ajouter_note: "a noté une tâche", cocher_note: "a coché une tâche",
   };
-  var ECRITURES = ["analyser_demande", "mettre_a_jour_demande", "creer_rdv", "modifier_rdv", "programmer_relance", "changer_statut", "enregistrer_prospects", "mettre_a_jour_prospect", "enregistrer_audit"];
+  var ECRITURES = ["analyser_demande", "mettre_a_jour_demande", "creer_rdv", "modifier_rdv", "programmer_relance", "changer_statut", "enregistrer_prospects", "mettre_a_jour_prospect", "enregistrer_audit", "ajouter_note", "cocher_note"];
   var LIB_CTX = { message: "Demande", prospect: "Prospect", rdv: "Rendez-vous" };
   var ATTENTE = {
     diagnostic: "Nadia lit vos demandes…",
     prospection: "Yann cherche sur le web… cela peut prendre une à deux minutes.",
-    agenda: "Awa consulte votre agenda…",
+    agenda: "Awa réfléchit…",
   };
 
   ADM.ouvrirEquipe = function (agent, opts) {
@@ -29,48 +29,155 @@
     ADM.aller("equipe/" + agent);
   };
 
+  var PRENOMS = { diagnostic: "Nadia", prospection: "Yann", agenda: "Awa" };
+  var ORDRE = ["diagnostic", "prospection", "agenda"];
+  /** Assistantes citées avec @Prénom dans un message de débrief (toutes si aucune). */
+  function citees(texte) {
+    var l = ORDRE.filter(function (k) { return new RegExp("@" + PRENOMS[k] + "(?![A-Za-zÀ-ÿ0-9])", "i").test(texte); });
+    return l.length ? l : ORDRE.slice();
+  }
+  function listePrenoms(l) {
+    var p = l.map(function (k) { return PRENOMS[k]; });
+    return p.length > 1 ? p.slice(0, -1).join(", ") + " et " + p[p.length - 1] : p[0] || "";
+  }
+  function avGroupe(taille) { return '<span class="av groupe ' + (taille || "") + '">' + ic("users-three") + "</span>"; }
+  function avIcone(icone, taille) { return '<span class="av outil ' + (taille || "") + '">' + ic(icone) + "</span>"; }
+  /** Fait défiler un fil tout en bas, sans animation au premier affichage. */
+  function enBasDe(fil, net) {
+    if (!net) { fil.scrollTop = fil.scrollHeight; return; }
+    fil.style.scrollBehavior = "auto";
+    fil.scrollTop = fil.scrollHeight;
+    requestAnimationFrame(function () { fil.scrollTop = fil.scrollHeight; fil.style.scrollBehavior = ""; });
+  }
+  function echeanceLib(j) {
+    if (!j) return "";
+    var auj = ADM.aujourdhui();
+    if (j === auj) return "aujourd’hui";
+    if (j === ADM.ajouterJours(auj, 1)) return "demain";
+    return ADM.jourLong(j, { weekday: "short", month: "short" });
+  }
+
   ADM.vue("equipe", {
     titre: "Équipe IA",
-    sous: "Discutez avec vos assistantes comme avec des collègues",
+    sous: "Vos assistantes, vos débriefs d’équipe et votre bloc-notes",
     plein: true,
     rendu: function (params, panel) {
       panel.innerHTML = '<div class="chat"><div class="chat-l"><div class="chat-l-h"><b>Votre équipe</b>' +
-        "<p>Trois assistantes IA qui travaillent pour vous, jour et nuit.</p></div><div class=\"contacts\"></div></div>" +
+        "<p>Trois assistantes IA qui travaillent pour vous, jour et nuit.</p></div>" +
+        '<div class="chat-l-b"><div class="contacts" data-l="agents"></div>' +
+        '<div class="chat-l-sec"><span>Débriefs d’équipe</span><button class="icobtn" data-a="nouveau" title="Nouveau débrief" aria-label="Nouveau débrief">' + ic("plus") + "</button></div>" +
+        '<div class="contacts" data-l="debriefs"></div>' +
+        '<div class="chat-l-sec"><span>Organisation</span></div><div class="contacts" data-l="outils"></div></div></div>' +
         '<div class="chat-r"></div></div>';
-      var boite = $(".chat", panel), contacts = $(".contacts", panel), droite = $(".chat-r", panel);
-      var equipe = [], actif = params[0] || "";
+      var boite = $(".chat", panel), droite = $(".chat-r", panel);
+      var lAgents = $('[data-l="agents"]', panel), lDebriefs = $('[data-l="debriefs"]', panel), lOutils = $('[data-l="outils"]', panel);
+      var equipe = [], debriefs = [], notes = [];
+      var actif = params[0] === "debrief" && params[1] ? "debrief:" + params[1] : params[0] || "";
 
-      api("/api/crm/equipe").then(function (l) {
-        equipe = l;
-        dessinerContacts();
+      $('[data-a="nouveau"]', panel).addEventListener("click", function () { nouveauDebrief(); });
+
+      Promise.all([api("/api/crm/equipe"), api("/api/crm/debriefs"), api("/api/crm/notes")]).then(function (r) {
+        equipe = r[0]; debriefs = r[1]; notes = r[2];
+        dessinerListe();
         if (!actif && innerWidth > 900) actif = "diagnostic";
-        if (actif) ouvrir(actif); else droite.innerHTML = "";
-      }).catch(ADM.erreur(contacts));
+        ouvrirCle(actif);
+      }).catch(ADM.erreur(lAgents));
 
       function fiche(agent) { return equipe.find(function (a) { return a.agent === agent; }) || {}; }
-      function dessinerContacts() {
-        contacts.innerHTML = "";
+      function ouvrirCle(cle) {
+        if (!cle) { droite.innerHTML = ""; return; }
+        if (cle.indexOf("debrief:") === 0) ouvrirDebrief(cle.slice(8));
+        else if (cle === "notes") ouvrirNotes();
+        else ouvrir(cle);
+      }
+      function ligneContact(cle, avatar, titre, quand, poste, apercu) {
+        var c = h('<div class="contact' + (cle === actif ? " on" : "") + '" tabindex="0" data-cle="' + esc(cle) + '">' + avatar +
+          '<div class="grow"><div class="l1"><b></b><time></time></div>' + (poste != null ? '<div class="poste"></div>' : "") + '<div class="l2"></div></div></div>');
+        $(".l1 b", c).textContent = titre;
+        $(".l1 time", c).textContent = quand || "";
+        if (poste != null) $(".poste", c).textContent = poste;
+        $(".l2", c).textContent = String(apercu || "").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim();
+        c.addEventListener("click", function () { ouvrirCle(cle); });
+        c.addEventListener("keydown", function (e) { if (e.key === "Enter") ouvrirCle(cle); });
+        return c;
+      }
+      function dessinerListe() {
+        lAgents.innerHTML = "";
         equipe.forEach(function (a) {
-          var c = h('<div class="contact' + (a.agent === actif ? " on" : "") + '" tabindex="0" data-agent="' + a.agent + '">' + ADM.avAgent(a.agent, "lg", ADM.statutAgent(a).dispo) +
-            '<div class="grow"><div class="l1"><b></b><time></time></div><div class="poste"></div><div class="l2"></div></div></div>');
-          $(".l1 b", c).textContent = a.prenom;
-          $(".l1 time", c).textContent = a.dernier ? ADM.dateRel(a.dernier.date) : "";
-          $(".poste", c).textContent = a.poste + " · " + a.fournisseur;
-          $(".l2", c).textContent = a.dernier ? (a.dernier.role === "user" ? "Vous : " : "") + a.dernier.texte : a.presentation;
-          c.addEventListener("click", function () { ouvrir(a.agent); });
-          c.addEventListener("keydown", function (e) { if (e.key === "Enter") ouvrir(a.agent); });
-          contacts.appendChild(c);
+          lAgents.appendChild(ligneContact(a.agent, ADM.avAgent(a.agent, "lg", ADM.statutAgent(a).dispo), a.prenom,
+            a.dernier ? ADM.dateRel(a.dernier.date) : "", a.poste + " · " + a.fournisseur,
+            a.dernier ? (a.dernier.role === "user" ? "Vous : " : "") + a.dernier.texte : a.presentation));
         });
+        lDebriefs.innerHTML = "";
+        if (!debriefs.length) {
+          var vide = h('<button class="chat-l-vide">' + ic("plus-circle") + "<span>Réunir l’équipe sur un client ou un sujet</span></button>");
+          vide.addEventListener("click", function () { nouveauDebrief(); });
+          lDebriefs.appendChild(vide);
+        }
+        debriefs.forEach(function (d) {
+          var der = d.dernier;
+          var apercu = der ? (der.role === "user" ? "Vous : " : (PRENOMS[der.agent] || "") + " : ") + der.texte : "Nadia, Yann et Awa";
+          lDebriefs.appendChild(ligneContact("debrief:" + d.id, avGroupe("lg"), d.titre, der ? ADM.dateRel(der.date) : ADM.dateRel(d.creeLe),
+            d.contexte ? d.contexte.label : "Sujet libre", apercu));
+        });
+        lOutils.innerHTML = "";
+        var aFaire = notes.filter(function (n) { return !n.fait; }).length;
+        lOutils.appendChild(ligneContact("notes", avIcone("note-pencil", "lg"), "Bloc-notes", "", "Vos tâches et celles notées par Awa",
+          aFaire ? aFaire + " tâche" + (aFaire > 1 ? "s" : "") + " à faire" : "Rien à faire pour l’instant"));
+      }
+      function marquer(cle, hash) {
+        actif = cle;
+        history.replaceState(null, "", "#equipe/" + hash);
+        $$(".contact", panel).forEach(function (c) { c.classList.toggle("on", c.dataset.cle === cle); });
+        boite.classList.add("detail");
+        droite.innerHTML = "";
+      }
+      function boutonRetour(tete) {
+        $(".retour-m", tete).addEventListener("click", function () { boite.classList.remove("detail"); history.replaceState(null, "", "#equipe"); actif = ""; });
+      }
+      function rechargerNotes() {
+        return api("/api/crm/notes").then(function (l) { notes = l; dessinerListe(); return l; });
       }
 
+      /* Zone de saisie commune aux discussions et aux débriefs */
+      function zoneSaisie(placeholder, note, surEnvoi) {
+        var compo = h('<div class="compose"><div class="compose-in"><div class="ctx-zone"></div><div class="compose-row">' +
+          '<textarea rows="1" aria-label="Votre message"></textarea>' +
+          '<button class="envoyer" disabled aria-label="Envoyer">' + ic("paper-plane-right") + "</button></div></div>" +
+          '<div class="compose-note"></div></div>');
+        var zone = $("textarea", compo), bouton = $(".envoyer", compo);
+        zone.placeholder = placeholder;
+        $(".compose-note", compo).textContent = note;
+        function ajuster() {
+          zone.style.height = "auto";
+          zone.style.height = Math.min(200, zone.scrollHeight) + "px";
+          bouton.disabled = !zone.value.trim();
+        }
+        zone.addEventListener("input", ajuster);
+        zone.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); surEnvoi(); } });
+        bouton.addEventListener("click", function () { surEnvoi(); });
+        setTimeout(function () { if (innerWidth > 900) zone.focus(); }, 60);
+        return { el: compo, zone: zone, ctxZone: $(".ctx-zone", compo), ajuster: ajuster };
+      }
+      function pastillesActions(filIn, prenom, actions) {
+        var faits = (actions || []).filter(function (x, i, t) { return t.findIndex(function (y) { return y.outil === x.outil && y.ok === x.ok; }) === i; });
+        if (!faits.length) return;
+        var f = h('<div class="faits"></div>');
+        faits.forEach(function (x) {
+          var ecrit = ECRITURES.indexOf(x.outil) !== -1;
+          f.appendChild(h('<span class="pill ' + (!x.ok ? "ko" : ecrit ? "ok" : "") + '">' + ic(!x.ok ? "warning-circle" : ecrit ? "check-circle" : "eye") +
+            esc(prenom + " " + (ACTIONS[x.outil] || x.outil)) + "</span>"));
+        });
+        filIn.appendChild(f);
+      }
+      function aNote(actions) { return (actions || []).some(function (x) { return x.ok && (x.outil === "ajouter_note" || x.outil === "cocher_note"); }); }
+
+      /* ---------------- Discussion avec une assistante ---------------- */
       function ouvrir(agent) {
-        actif = agent;
-        history.replaceState(null, "", "#equipe/" + agent);
-        $$(".contact", contacts).forEach(function (c) { c.classList.toggle("on", c.dataset.agent === agent); });
-        boite.classList.add("detail");
+        if (!ADM.EQUIPE[agent]) { ouvrirCle(innerWidth > 900 ? "diagnostic" : ""); return; }
+        marquer(agent, agent);
         var a = fiche(agent);
         var meta = ADM.EQUIPE[agent] || {};
-        droite.innerHTML = "";
         var tete = h('<div class="chat-h"><button class="icobtn retour-m" aria-label="Retour">' + ic("arrow-left") + "</button>" + ADM.avAgent(agent, "", ADM.statutAgent(a).dispo) +
           '<div class="grow"><b></b><small><span class="dot"></span><span class="st"></span></small></div>' +
           '<button class="icobtn" data-a="fiche" title="Sa fiche" aria-label="Sa fiche">' + ic("identification-card") + "</button>" +
@@ -85,11 +192,11 @@
           if (etat) etat.classList.toggle("off", !st.dispo);
         }
         majStatut();
-        $(".retour-m", tete).addEventListener("click", function () { boite.classList.remove("detail"); history.replaceState(null, "", "#equipe"); actif = ""; });
+        boutonRetour(tete);
         $('[data-a="fiche"]', tete).addEventListener("click", function () { ouvrirFiche(a); });
         $('[data-a="vider"]', tete).addEventListener("click", function () {
           if (!confirm("Effacer toute la conversation avec " + a.prenom + " ? Ce qu’elle a fait (rendez-vous, prospects…) reste enregistré.")) return;
-          api("/api/crm/equipe/" + agent, { method: "DELETE" }).then(function () { a.dernier = null; dessinerContacts(); ouvrir(agent); ADM.rafraichirEquipe(); });
+          api("/api/crm/equipe/" + agent, { method: "DELETE" }).then(function () { a.dernier = null; dessinerListe(); ouvrir(agent); ADM.rafraichirEquipe(); });
         });
         droite.appendChild(tete);
 
@@ -97,19 +204,16 @@
         var filIn = $(".fil-in", fil);
         droite.appendChild(fil);
 
-        var compo = h('<div class="compose"><div class="compose-in"><div class="ctx-zone"></div><div class="compose-row">' +
-          '<textarea rows="1" placeholder="Écrire à ' + esc(a.prenom || "") + '…" aria-label="Votre message"></textarea>' +
-          '<button class="envoyer" disabled aria-label="Envoyer">' + ic("paper-plane-right") + "</button></div></div>" +
-          '<div class="compose-note">' + esc(a.prenom || "") + " est une assistante IA : vérifiez ce qu’elle prépare avant de l’envoyer à un client.</div></div>");
-        droite.appendChild(compo);
-        var zone = $("textarea", compo), bouton = $(".envoyer", compo), ctxZone = $(".ctx-zone", compo);
+        var saisie = zoneSaisie("Écrire à " + (a.prenom || "") + "…", (a.prenom || "") + " est une assistante IA : vérifiez ce qu’elle prépare avant de l’envoyer à un client.", envoyer);
+        droite.appendChild(saisie.el);
+        var zone = saisie.zone, ajuster = saisie.ajuster, ctxZone = saisie.ctxZone;
         var contexte = null;
 
         var attente = ADM.etat.equipeAttente;
         if (attente && attente.agent === agent) {
           ADM.etat.equipeAttente = null;
           if (attente.contexte) poserContexte(attente.contexte);
-          if (attente.texte) zone.value = attente.texte;
+          if (attente.texte) { zone.value = attente.texte; ajuster(); }
         }
         function poserContexte(c) {
           contexte = c;
@@ -120,16 +224,6 @@
           $("button", chip).addEventListener("click", function () { poserContexte(null); });
           ctxZone.appendChild(chip);
         }
-        function ajuster() {
-          zone.style.height = "auto";
-          zone.style.height = Math.min(200, zone.scrollHeight) + "px";
-          bouton.disabled = !zone.value.trim();
-        }
-        zone.addEventListener("input", ajuster);
-        zone.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); envoyer(); } });
-        bouton.addEventListener("click", envoyer);
-        ajuster();
-        setTimeout(function () { if (innerWidth > 900) zone.focus(); }, 60);
 
         function intro() {
           var st = ADM.statutAgent(a);
@@ -159,26 +253,15 @@
           filIn.appendChild(r);
           var meta = h('<div class="msg-meta"></div>');
           meta.textContent = m.date ? ADM.dateRel(m.date) : "";
-          if (moi) meta.style.textAlign = "right";
           filIn.appendChild(meta);
-          var faits = (m.actions || []).filter(function (x, i, t) { return t.findIndex(function (y) { return y.outil === x.outil && y.ok === x.ok; }) === i; });
-          if (faits.length) {
-            var f = h('<div class="faits"></div>');
-            faits.forEach(function (x) {
-              var ecrit = ECRITURES.indexOf(x.outil) !== -1;
-              f.appendChild(h('<span class="pill ' + (!x.ok ? "ko" : ecrit ? "ok" : "") + '">' + ic(!x.ok ? "warning-circle" : ecrit ? "check-circle" : "eye") +
-                esc((a.prenom || "") + " " + (ACTIONS[x.outil] || x.outil)) + "</span>"));
-            });
-            filIn.appendChild(f);
-          }
+          pastillesActions(filIn, a.prenom || "", m.actions);
         }
-        function enBas() { fil.scrollTop = fil.scrollHeight; }
 
         api("/api/crm/equipe/" + agent).then(function (d) {
           filIn.innerHTML = "";
           intro();
           (d.messages || []).forEach(bulle);
-          enBas();
+          enBasDe(fil, true);
           if (attente && attente.envoyer) envoyer();
         }).catch(ADM.erreur(filIn));
 
@@ -196,35 +279,269 @@
           var note = h('<div class="msg-meta"></div>');
           note.textContent = ATTENTE[agent] || "";
           filIn.appendChild(ecrit); filIn.appendChild(note);
-          enBas();
+          enBasDe(fil);
           api("/api/crm/equipe/" + agent, { method: "POST", body: { texte: texte, contexte: ctx ? { type: ctx.type, id: ctx.id } : null } }).then(function (r) {
             ecrit.remove(); note.remove();
             bulle(r.message);
-            enBas();
+            enBasDe(fil);
             a.dernier = r.message;
-            dessinerContacts();
+            dessinerListe();
             ADM.rafraichirEquipe();
             ADM.rafraichirCompteurs();
             var outils = (r.actions || []).filter(function (x) { return x.ok; }).map(function (x) { return x.outil; });
             if (outils.indexOf("creer_rdv") !== -1 || outils.indexOf("modifier_rdv") !== -1) ADM.toast("Agenda mis à jour");
             if (outils.indexOf("enregistrer_prospects") !== -1) ADM.toast("Nouveaux prospects ajoutés");
+            if (aNote(r.actions)) { ADM.toast("Bloc-notes mis à jour"); rechargerNotes(); }
           }).catch(function (e) {
             ecrit.remove(); note.remove();
             bulle({ role: "assistant", texte: e.message, erreur: true, date: new Date().toISOString() });
-            enBas();
+            enBasDe(fil);
             if (/budget du jour/i.test(e.message || "")) {
               a.jetonsJour = Math.max(a.jetonsJour || 0, a.limiteJetons || 0);
-              majStatut(); dessinerContacts(); ADM.rafraichirEquipe();
+              majStatut(); dessinerListe(); ADM.rafraichirEquipe();
             }
           }).then(function () { envoiEnCours = false; });
         }
+      }
+
+      /* ---------------- Débrief d'équipe ---------------- */
+      function nouveauDebrief() {
+        var corps = h('<div><label style="margin-top:0">Sujet</label><input data-k="titre" maxlength="120" placeholder="Ex. : Préparer le devis de Folie Douce">' +
+          '<label>Client concerné <span class="help">(facultatif)</span></label><select data-k="client"><option value="">Aucun, sujet libre</option></select>' +
+          '<p class="muted" style="font-size:12.5px;margin:4px 0 14px">Nadia et Yann donnent leur avis, puis Awa fait la synthèse : les grands points, et les tâches à faire qu’elle note dans votre bloc-notes.</p>' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn ghost" data-a="annuler">Annuler</button><button class="btn primary" data-a="creer">' + ic("users-three") + "Réunir l’équipe</button></div></div>");
+        var m = ADM.modale("Nouveau débrief", corps);
+        var sel = $('[data-k="client"]', corps), titre = $('[data-k="titre"]', corps), clients = [];
+        api("/api/crm/debriefs-clients").then(function (l) {
+          clients = l;
+          [["message", "Demandes reçues"], ["prospect", "Prospects"]].forEach(function (g) {
+            var dans = l.filter(function (c) { return c.type === g[0]; });
+            if (!dans.length) return;
+            var og = document.createElement("optgroup");
+            og.label = g[1];
+            dans.forEach(function (c, i) {
+              var o = document.createElement("option");
+              o.value = c.type + ":" + c.id;
+              o.textContent = c.label + (c.sous ? " · " + c.sous : "");
+              og.appendChild(o);
+            });
+            sel.appendChild(og);
+          });
+        }).catch(function () {});
+        sel.addEventListener("change", function () {
+          var c = clients.find(function (x) { return x.type + ":" + x.id === sel.value; });
+          if (c && !titre.value.trim()) titre.value = "Point sur " + c.label;
+        });
+        $('[data-a="annuler"]', corps).addEventListener("click", function () { m.fermer(); });
+        var creer = $('[data-a="creer"]', corps);
+        function valider() {
+          if (!titre.value.trim()) { titre.focus(); ADM.toast("Donnez un sujet au débrief", "ko"); return; }
+          var v = sel.value.split(":");
+          creer.disabled = true;
+          api("/api/crm/debriefs", { method: "POST", body: { titre: titre.value.trim(), contexte: v[1] ? { type: v[0], id: v[1] } : null } }).then(function (d) {
+            m.fermer();
+            debriefs.unshift(d);
+            dessinerListe();
+            ouvrirDebrief(d.id);
+          }).catch(function (e) { creer.disabled = false; ADM.toast(e.message, "ko"); });
+        }
+        creer.addEventListener("click", valider);
+        titre.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); valider(); } });
+      }
+
+      function ouvrirDebrief(id) {
+        var d = debriefs.find(function (x) { return x.id === id; });
+        if (!d) { ADM.toast("Ce débrief n’existe plus", "ko"); ouvrirCle(innerWidth > 900 ? "diagnostic" : ""); return; }
+        marquer("debrief:" + id, "debrief/" + id);
+        var tete = h('<div class="chat-h"><button class="icobtn retour-m" aria-label="Retour">' + ic("arrow-left") + "</button>" + avGroupe() +
+          '<div class="grow"><b></b><small></small></div>' +
+          '<button class="icobtn danger" data-a="suppr" title="Supprimer le débrief" aria-label="Supprimer le débrief">' + ic("trash") + "</button></div>");
+        $(".grow b", tete).textContent = d.titre;
+        $(".grow small", tete).textContent = (d.contexte ? d.contexte.label + " · " : "") + "Nadia, Yann et Awa";
+        boutonRetour(tete);
+        $('[data-a="suppr"]', tete).addEventListener("click", function () {
+          if (!confirm("Supprimer le débrief « " + d.titre + " » ? Les tâches notées dans le bloc-notes restent.")) return;
+          api("/api/crm/debriefs/" + id, { method: "DELETE" }).then(function () {
+            debriefs = debriefs.filter(function (x) { return x.id !== id; });
+            dessinerListe();
+            ouvrirCle(innerWidth > 900 ? "diagnostic" : "");
+            if (innerWidth <= 900) boite.classList.remove("detail");
+          }).catch(function (e) { ADM.toast(e.message, "ko"); });
+        });
+        droite.appendChild(tete);
+
+        var fil = h('<div class="fil"><div class="fil-in"></div></div>');
+        var filIn = $(".fil-in", fil);
+        droite.appendChild(fil);
+        var saisie = zoneSaisie("Écrire à l’équipe…",
+          "Nadia et Yann répondent, puis Awa fait la synthèse. Vérifiez ce qu’elles préparent avant de l’envoyer à un client.", envoyer);
+        droite.appendChild(saisie.el);
+        var zone = saisie.zone, ajuster = saisie.ajuster;
+        var cibles = h('<div class="cibles"></div>');
+        ORDRE.forEach(function (k) {
+          var b = h('<button type="button">' + ADM.avAgent(k, "xs") + '<span class="lib"></span></button>');
+          $(".lib", b).textContent = "@" + PRENOMS[k];
+          b.addEventListener("click", function () {
+            var t = "@" + PRENOMS[k] + " ";
+            if (zone.value.indexOf(t.trim()) === -1) zone.value = t + zone.value.replace(/^\s+/, "");
+            ajuster(); zone.focus();
+          });
+          cibles.appendChild(b);
+        });
+        saisie.ctxZone.appendChild(cibles);
+
+        function intro() {
+          var p = h('<div class="presente">' + avGroupe("xl") + '<b></b><p></p><div class="meta"></div><div class="idees" style="margin-top:14px"></div></div>');
+          $("b", p).textContent = d.titre;
+          $("p", p).textContent = "Posez votre question à toute l’équipe. Nadia et Yann donnent leur avis, puis Awa réagit et fait la synthèse : " +
+            "les grands points, et les tâches à faire qu’elle note dans votre bloc-notes. Écrivez @Nadia, @Yann ou @Awa pour ne parler qu’à une seule.";
+          if (d.contexte) $(".meta", p).appendChild(h('<span class="pill bleu">' + ic(d.contexte.type === "prospect" ? "target" : "chat-circle-text") + esc(d.contexte.label) + "</span>"));
+          var idees = d.contexte
+            ? ["Faisons le point sur ce client", "Quel prix proposer, et avec quelle marge ?", "Qu’attend ce client de moi ?"]
+            : ["Faisons le point de la semaine", "Comment trouver 3 nouveaux clients ce mois-ci ?", "Quelles priorités pour les 7 prochains jours ?"];
+          idees.forEach(function (s) {
+            var b = h("<button></button>");
+            b.textContent = s;
+            b.addEventListener("click", function () { zone.value = s; ajuster(); envoyer(); });
+            $(".idees", p).appendChild(b);
+          });
+          filIn.appendChild(p);
+        }
+        function bulle(m) {
+          var moi = m.role === "user";
+          var prenom = PRENOMS[m.agent] || "";
+          var r = h('<div class="msg-r ' + (moi ? "moi" : "lui") + (m.erreur ? " erreur" : "") + '">' + (moi ? "" : ADM.avAgent(m.agent, "sm")) +
+            '<div class="bulle-c">' + (moi ? "" : '<span class="qui"></span>') + '<div class="bulle"></div></div></div>');
+          if (!moi) $(".qui", r).textContent = prenom;
+          var b = $(".bulle", r);
+          if (moi || m.erreur) b.textContent = m.texte; else b.innerHTML = ADM.markdown(m.texte);
+          filIn.appendChild(r);
+          var meta = h('<div class="msg-meta"></div>');
+          meta.textContent = m.date ? ADM.dateRel(m.date) : "";
+          filIn.appendChild(meta);
+          if (!moi) pastillesActions(filIn, prenom, m.actions);
+        }
+
+        api("/api/crm/debriefs/" + id).then(function (r) {
+          filIn.innerHTML = "";
+          intro();
+          (r.messages || []).forEach(bulle);
+          enBasDe(fil, true);
+        }).catch(ADM.erreur(filIn));
+
+        var envoiEnCours = false;
+        function envoyer() {
+          var texte = zone.value.trim();
+          if (!texte || envoiEnCours) return;
+          var qui = citees(texte);
+          var dispo = qui.filter(function (k) { return ADM.statutAgent(fiche(k)).dispo; });
+          if (!dispo.length) { ADM.toast(qui.length > 1 ? "Aucune assistante n’est disponible (clé manquante ou budget du jour atteint)." : PRENOMS[qui[0]] + " n’est pas disponible.", "ko"); return; }
+          envoiEnCours = true;
+          bulle({ role: "user", texte: texte, date: new Date().toISOString() });
+          zone.value = ""; ajuster();
+          var ecrit = h('<div class="msg-r lui"><span class="av-pile"></span><div class="bulle" style="padding:0"><div class="ecrit"><i></i><i></i><i></i></div></div></div>');
+          qui.forEach(function (k) { $(".av-pile", ecrit).insertAdjacentHTML("beforeend", ADM.avAgent(k, "sm")); });
+          var note = h('<div class="msg-meta"></div>');
+          var avant = qui.filter(function (k) { return k !== "agenda"; });
+          note.textContent = qui.indexOf("agenda") !== -1 && avant.length
+            ? listePrenoms(avant) + (avant.length > 1 ? " répondent" : " répond") + ", puis Awa fait la synthèse…" + (avant.indexOf("prospection") !== -1 ? " Jusqu’à deux minutes si Yann cherche sur le web." : "")
+            : listePrenoms(qui) + (qui.length > 1 ? " réfléchissent…" : " réfléchit…");
+          filIn.appendChild(ecrit); filIn.appendChild(note);
+          enBasDe(fil);
+          api("/api/crm/debriefs/" + id, { method: "POST", body: { texte: texte } }).then(function (r) {
+            ecrit.remove(); note.remove();
+            (r.reponses || []).forEach(bulle);
+            enBasDe(fil);
+            var der = (r.reponses || []).slice(-1)[0] || r.message;
+            d.dernier = der; d.nbMessages = (d.nbMessages || 0) + 1 + (r.reponses || []).length;
+            debriefs.sort(function (x, y) { return String((y.dernier && y.dernier.date) || y.creeLe).localeCompare(String((x.dernier && x.dernier.date) || x.creeLe)); });
+            dessinerListe();
+            ADM.rafraichirEquipe();
+            var toutes = [];
+            (r.reponses || []).forEach(function (x) { toutes = toutes.concat(x.actions || []); });
+            if (aNote(toutes)) { ADM.toast("Awa a mis à jour le bloc-notes"); rechargerNotes(); }
+            api("/api/crm/equipe").then(function (l) { equipe = l; dessinerListe(); }).catch(function () {});
+          }).catch(function (e) {
+            ecrit.remove(); note.remove();
+            bulle({ role: "assistant", agent: "agenda", texte: e.message, erreur: true, date: new Date().toISOString() });
+            enBasDe(fil);
+          }).then(function () { envoiEnCours = false; });
+        }
+      }
+
+      /* ---------------- Bloc-notes ---------------- */
+      function ouvrirNotes() {
+        marquer("notes", "notes");
+        var tete = h('<div class="chat-h"><button class="icobtn retour-m" aria-label="Retour">' + ic("arrow-left") + "</button>" + avIcone("note-pencil") +
+          '<div class="grow"><b>Bloc-notes</b><small>Vos tâches, et celles qu’Awa note pendant les débriefs</small></div></div>');
+        boutonRetour(tete);
+        droite.appendChild(tete);
+        var fil = h('<div class="fil"><div class="fil-in notes"></div></div>');
+        var zoneNotes = $(".fil-in", fil);
+        droite.appendChild(fil);
+
+        var form = h('<form class="note-ajout"><input data-k="texte" maxlength="500" placeholder="Ajouter une tâche…" aria-label="Nouvelle tâche">' +
+          '<div class="note-ajout-l"><input data-k="client" maxlength="120" placeholder="Client (facultatif)" aria-label="Client concerné" list="notes-clients">' +
+          '<input data-k="echeance" type="date" aria-label="Échéance"><button class="btn primary" type="submit">' + ic("plus") + "Ajouter</button></div>" +
+          '<datalist id="notes-clients"></datalist></form>');
+        zoneNotes.appendChild(form);
+        var liste = h("<div></div>");
+        zoneNotes.appendChild(liste);
+        api("/api/crm/debriefs-clients").then(function (l) {
+          var dl = $("datalist", form), vus = {};
+          l.forEach(function (c) { if (vus[c.label]) return; vus[c.label] = 1; var o = document.createElement("option"); o.value = c.label; dl.appendChild(o); });
+        }).catch(function () {});
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          var t = $('[data-k="texte"]', form);
+          if (!t.value.trim()) { t.focus(); return; }
+          api("/api/crm/notes", { method: "POST", body: { texte: t.value, client: $('[data-k="client"]', form).value, echeance: $('[data-k="echeance"]', form).value } }).then(function () {
+            t.value = ""; $('[data-k="client"]', form).value = ""; $('[data-k="echeance"]', form).value = "";
+            t.focus();
+            return rechargerNotes().then(dessiner);
+          }).catch(function (er) { ADM.toast(er.message, "ko"); });
+        });
+
+        function ligne(n) {
+          var retard = !n.fait && n.echeance && n.echeance < ADM.aujourdhui();
+          var r = h('<div class="note' + (n.fait ? " fait" : "") + '"><input type="checkbox" aria-label="Fait"><div class="grow"><div class="t"></div><div class="m"></div></div>' +
+            '<button class="icobtn danger" title="Supprimer" aria-label="Supprimer">' + ic("trash") + "</button></div>");
+          $(".t", r).textContent = n.texte;
+          var m = $(".m", r);
+          if (n.client) m.appendChild(h('<span class="pill">' + ic("user") + esc(n.client) + "</span>"));
+          if (n.echeance) m.appendChild(h('<span class="pill ' + (retard ? "ko" : n.fait ? "" : "bleu") + '">' + ic("calendar-dots") + esc((retard ? "En retard · " : "") + echeanceLib(n.echeance)) + "</span>"));
+          if (n.auteur && n.auteur !== "Paule") m.appendChild(h('<span class="pill">' + ic("sparkle") + "Noté par " + esc(n.auteur) + "</span>"));
+          var cb = $("input", r);
+          cb.checked = n.fait;
+          cb.addEventListener("change", function () {
+            api("/api/crm/notes/" + n.id, { method: "PUT", body: { fait: cb.checked } }).then(function () { return rechargerNotes().then(dessiner); })
+              .catch(function (e) { cb.checked = !cb.checked; ADM.toast(e.message, "ko"); });
+          });
+          $("button", r).addEventListener("click", function () {
+            api("/api/crm/notes/" + n.id, { method: "DELETE" }).then(function () { return rechargerNotes().then(dessiner); }).catch(function (e) { ADM.toast(e.message, "ko"); });
+          });
+          return r;
+        }
+        function dessiner() {
+          liste.innerHTML = "";
+          var aFaire = notes.filter(function (n) { return !n.fait; }), faites = notes.filter(function (n) { return n.fait; });
+          liste.appendChild(h('<div class="notes-t">À faire <span class="faint">' + aFaire.length + "</span></div>"));
+          if (!aFaire.length) liste.appendChild(h('<p class="muted notes-vide">Rien à faire pour l’instant. Ajoutez une tâche, ou demandez à Awa de noter les actions d’un débrief.</p>'));
+          aFaire.forEach(function (n) { liste.appendChild(ligne(n)); });
+          if (faites.length) {
+            liste.appendChild(h('<div class="notes-t">Fait <span class="faint">' + faites.length + "</span></div>"));
+            faites.slice(0, 50).forEach(function (n) { liste.appendChild(ligne(n)); });
+          }
+        }
+        dessiner();
       }
 
       function ouvrirFiche(a) {
         var acces = {
           diagnostic: ["Lire vos demandes reçues et leurs coordonnées", "Analyser une demande et enregistrer l’analyse", "Mettre à jour l’étape, la relance et vos notes"],
           prospection: ["Chercher et lire des pages web publiques", "Ajouter et mettre à jour des prospects", "Enregistrer des audits de présence en ligne"],
-          agenda: ["Consulter et créer des rendez-vous", "Déplacer, confirmer ou annuler un rendez-vous", "Programmer des relances et changer les étapes"],
+          agenda: ["Consulter et créer des rendez-vous", "Déplacer, confirmer ou annuler un rendez-vous", "Programmer des relances et changer les étapes",
+            "Vous conseiller sur vos prix, vos marges et les attentes de vos clients", "Lire vos demandes reçues et vos prospects", "Noter et cocher des tâches dans le bloc-notes"],
         }[a.agent] || [];
         var corps = h('<div><div class="presente" style="padding-top:18px">' + ADM.avAgent(a.agent, "xl", ADM.statutAgent(a).dispo) + "<b></b><p></p></div>" +
           '<section class="sec"><div class="sec-b">' +

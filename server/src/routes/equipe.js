@@ -38,6 +38,55 @@ router.delete("/equipe/:agent", enveloppe(async (req, res) => {
   res.json({ ok: true });
 }));
 
+/* ---------------- Débriefs d'équipe ---------------- */
+const ID_RE = /^[\w-]{1,64}$/;
+async function contexteValide(c) {
+  if (!c || ["message", "prospect"].indexOf(c.type) === -1 || !ID_RE.test(String(c.id || ""))) return null;
+  const d = await col(c.type === "message" ? "messages" : "prospects").get(String(c.id));
+  return d ? { type: c.type, id: String(d._id), label: String(d.nom || "Sans nom").slice(0, 120) } : null;
+}
+
+router.get("/debriefs", enveloppe(async (_req, res) => res.json(await agents.listerDebriefs())));
+
+// Clients qu'on peut associer à un débrief : demandes reçues (hors spam) et prospects
+router.get("/debriefs-clients", enveloppe(async (_req, res) => {
+  const m = (await col("messages").all()).filter((x) => !x.spam).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, 80).map((x) => ({ type: "message", id: String(x._id), label: x.nom || "Anonyme", sous: court(x.besoin || x.message, 60) }));
+  const p = (await col("prospects").all()).slice(-80).reverse()
+    .map((x) => ({ type: "prospect", id: String(x._id), label: x.nom || "Sans nom", sous: [x.secteur, x.ville].filter(Boolean).join(" · ") }));
+  res.json(m.concat(p));
+}));
+
+router.post("/debriefs", enveloppe(async (req, res) => {
+  const b = req.body || {};
+  res.json(await agents.creerDebrief(b.titre, await contexteValide(b.contexte)));
+}));
+
+router.get("/debriefs/:id", enveloppe(async (req, res) => {
+  const d = await agents.lireDebrief(req.params.id);
+  res.json(Object.assign(agents.debriefPublic(d), { messages: d.messages || [] }));
+}));
+
+router.post("/debriefs/:id", enveloppe(async (req, res) => res.json(await agents.debriefer(req.params.id, (req.body || {}).texte))));
+
+router.delete("/debriefs/:id", enveloppe(async (req, res) => {
+  await agents.lireDebrief(req.params.id);
+  await col("debriefs").remove(req.params.id);
+  res.json({ ok: true });
+}));
+
+/* ---------------- Bloc-notes ---------------- */
+router.get("/notes", enveloppe(async (_req, res) => res.json(await agents.listerNotes())));
+router.post("/notes", enveloppe(async (req, res) => {
+  const b = req.body || {};
+  res.json(await agents.ajouterNote({ texte: b.texte, client: b.client, echeance: b.echeance, auteur: "Paule" }));
+}));
+router.put("/notes/:id", enveloppe(async (req, res) => res.json(await agents.modifierNote(req.params.id, req.body || {}))));
+router.delete("/notes/:id", enveloppe(async (req, res) => {
+  if (!(await col("notes").remove(req.params.id))) return res.status(404).json({ erreur: "Tâche introuvable" });
+  res.json({ ok: true });
+}));
+
 /* ---------------- Recherche globale (palette de commandes) ---------------- */
 router.get("/recherche", enveloppe(async (req, res) => {
   const q = String(req.query.q || "").toLowerCase().trim();
@@ -78,6 +127,7 @@ const ACTIONS_IA = {
   "recherche de prospects": "a cherché de nouveaux prospects",
   "assistant agenda": "a mis à jour l’agenda",
   discussion: "vous a répondu",
+  "débrief d’équipe": "a participé à un débrief",
 };
 router.get("/activite", enveloppe(async (_req, res) => {
   const ev = [];

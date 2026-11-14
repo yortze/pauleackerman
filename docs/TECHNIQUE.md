@@ -14,7 +14,11 @@ Installation, déploiement et fonctionnement interne du portfolio. La présentat
   (conversations enregistrées) :
   - **Nadia** (relation client, OpenAI) — analyse les demandes, prépare les réponses
   - **Yann** (prospection, Claude) — cherche des clients sur le web, audite leur présence en ligne
-  - **Awa** (agenda & relances, OpenAI) — rendez-vous, relances, suivi des contacts
+  - **Awa** (bras droit, OpenAI) — rendez-vous, relances, suivi des contacts, et conseil : prix et marges
+    à prendre, attentes de chaque client, grands points à retenir ; elle note les tâches dans le bloc-notes
+  - **Débriefs d’équipe** : Paule réunit les trois sur un sujet ou un client ; Nadia et Yann répondent, puis
+    Awa fait la synthèse (grands points, à faire). « @Nadia », « @Yann » ou « @Awa » : seule la personne citée répond
+  - **Bloc-notes** : tâches à faire (client, échéance), cochées par Paule ou par Awa
 - **Prospects** : pipeline en colonnes (glisser-déposer), fiche détaillée, audit, message d'approche
 - **Agenda** : vue semaine, disponibilités, réservation d'appel depuis le site
 - **Audience** : visites, sources, appareils, pays, heures de visite, contenus vus,

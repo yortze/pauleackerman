@@ -217,7 +217,7 @@ kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line-2);bord
 .only-m{display:none}
 .panel{flex:1;width:100%;max-width:1240px;margin:0 auto;padding:26px 28px 80px;animation:arrive .25s ease}
 @keyframes arrive{from{transform:translateY(6px)}to{transform:none}}
-.panel.plein{max-width:none;padding:0;height:calc(100vh - 64px);overflow:hidden}
+.panel.plein{flex:none;max-width:none;padding:0;height:calc(100vh - 64px);height:calc(100dvh - 64px);overflow:hidden}
 .mnav{display:none}
 
 /* ---------- En-têtes de vue (y compris éditeurs de contenu) ---------- */
@@ -435,6 +435,36 @@ button.tuile:hover{border-color:var(--accent-line)}
 .contact .l1 time{font-size:11.5px;color:var(--ink-3)}
 .contact .l2{font-size:12.5px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .contact .poste{font-size:11.5px;color:var(--ink-3)}
+.chat-l-b{flex:1;min-height:0;overflow-y:auto;padding-bottom:12px}
+.chat-l-sec{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3)}
+.chat-l-vide{display:flex;align-items:center;gap:10px;width:calc(100% - 24px);margin:4px 12px;padding:12px;border:1px dashed var(--line-2);border-radius:var(--r-sm);font-size:13px;color:var(--ink-2);text-align:left}
+.chat-l-vide:hover{background:var(--hover);color:var(--ink)}
+.chat-l-vide .ph-duotone{font-size:20px;color:var(--accent)}
+.av.groupe{background:linear-gradient(135deg,#2D6AE0,#E8833A 55%,#1A8D4B)}
+.av.outil{background:var(--accent-soft);color:var(--accent)}
+.av.groupe .ph-duotone,.av.outil .ph-duotone{font-size:1.25em}
+.av.xs{width:20px;height:20px;font-size:10px}
+.av-pile{display:flex;flex:0 0 auto}.av-pile .av{border:2px solid var(--bg)}.av-pile .av+.av{margin-left:-10px}
+.bulle-c{display:flex;flex-direction:column;gap:3px;max-width:min(78%,620px);min-width:0}
+.bulle-c .bulle{max-width:100%}
+.msg-r.moi .bulle-c{align-items:flex-end}
+.bulle-c .qui{font-size:11.5px;font-weight:700;color:var(--ink-2);margin-left:4px}
+.cibles{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 6px}
+.cibles button{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border-radius:999px;padding:3px 10px 3px 3px}
+.cibles button:hover{background:var(--accent-soft);color:var(--accent)}
+.fil-in.notes{gap:0;max-width:720px}
+.note-ajout{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow-1);margin-bottom:8px}
+.note-ajout-l{display:flex;gap:8px}
+.note-ajout-l input[data-k=client]{flex:1}.note-ajout-l input[type=date]{width:auto;flex:0 0 auto}
+.notes-t{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin:18px 4px 6px}
+.notes-vide{font-size:13px;padding:6px 4px}
+.note{display:flex;align-items:flex-start;gap:12px;padding:12px 12px 12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin-bottom:6px}
+.note input[type=checkbox]{margin-top:3px;width:18px;height:18px;flex:0 0 auto;cursor:pointer}
+.note .grow{flex:1;min-width:0}
+.note .t{font-size:14px;line-height:1.45;word-break:break-word}
+.note .m{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.note .m:empty{display:none}
+.note.fait .t{text-decoration:line-through;color:var(--ink-3)}
+.note .icobtn{opacity:.6}.note:hover .icobtn{opacity:1}
 .chat-r{display:flex;flex-direction:column;min-height:0;background:var(--bg)}
 .chat-h{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
 .chat-h .grow{flex:1;min-width:0}
@@ -606,7 +636,7 @@ button.tuile:hover{border-color:var(--accent-line)}
   .hide-m{display:none!important}
   .tb{padding:0 12px;height:56px}
   .panel{padding:18px 14px 96px}
-  .panel.plein{height:calc(100vh - 56px - 64px)}
+  .panel.plein{height:calc(100vh - 56px - 64px);height:calc(100dvh - 56px - 64px)}
   .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;height:64px;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
   .mnav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--ink-3);position:relative}
   .mnav button .ph-duotone{font-size:22px}
@@ -630,6 +660,7 @@ button.tuile:hover{border-color:var(--accent-line)}
   .toast{max-width:none}
   .notifs{top:52px;right:12px}
   .fil{padding:16px 12px 8px}
+  .note-ajout-l{flex-wrap:wrap}.note-ajout-l input[data-k=client]{flex:1 1 100%}.note-ajout-l .btn{flex:1}
   .compose{padding:8px 10px 10px}
   .sem-heures div{font-size:10px;padding:0 4px}
 }
@@ -1289,8 +1320,8 @@ function dateCourte(iso) {
 }
 
 </script>
-<script src="/admin-app.js?v=2026-11-14b"></script>
-<script src="/admin-vues.js?v=2026-11-14"></script>
+<script src="/admin-app.js?v=2026-11-14c"></script>
+<script src="/admin-vues.js?v=2026-11-14c"></script>
 <script src="/admin-audience.js?v=2026-11-13c"></script>
 </body>
 </html>
