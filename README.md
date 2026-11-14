@@ -70,7 +70,7 @@ retrouve tout de suite et peut écrire à Paule sans quitter la page.
 **Côté Paule : un espace pro (`/admin`)**
 - **Messages** : chaque demande avec le besoin, le budget, le délai et le suivi
 - **Prospects** : pipeline en colonnes, du premier contact au client signé
-- **Agenda** : disponibilités et rendez-vous pris depuis le site
+- **Agenda** : disponibilités et rendez-vous pris depuis le site, ajoutés automatiquement à son Google Agenda avec les rappels
 - **Audience** : visites, sources, appareils, entonnoir de conversion, liens de suivi avec QR code. Statistiques anonymes, sans cookie et sans stocker d'IP.
 - **Mon site** : publications, vidéos, formules, avis clients et logo modifiables sans toucher au code
 
