@@ -57,12 +57,42 @@ function traduire(e) {
   return e;
 }
 
+// Les schémas d'outils sont écrits au format strict d'OpenAI, partagé avec Nadia et Awa.
+// Claude refuse un enum combiné à un type multiple ({ type: ["string", "null"], enum: [...] }) :
+// on l'écrit pour lui en anyOf ({ anyOf: [{ type: "string", enum: [...] }, { type: "null" }] }).
+const DU_TYPE = {
+  string: (v) => typeof v === "string",
+  integer: (v) => Number.isInteger(v),
+  number: (v) => typeof v === "number",
+  boolean: (v) => typeof v === "boolean",
+};
+function schemaClaude(s) {
+  if (!s || typeof s !== "object" || Array.isArray(s)) return s;
+  let o = Object.assign({}, s);
+  if (o.properties) o.properties = Object.fromEntries(Object.entries(o.properties).map(([k, v]) => [k, schemaClaude(v)]));
+  if (o.items) o.items = schemaClaude(o.items);
+  for (const k of ["anyOf", "allOf"]) if (Array.isArray(o[k])) o[k] = o[k].map(schemaClaude);
+  if (Array.isArray(o.type) && Array.isArray(o.enum)) {
+    const { type, enum: valeurs, ...reste } = o;
+    const anyOf = type.filter((t) => t !== "null")
+      .map((t) => ({ type: t, enum: valeurs.filter((v) => DU_TYPE[t] && DU_TYPE[t](v)) }))
+      .filter((b) => b.enum.length);
+    if (type.includes("null")) anyOf.push({ type: "null" });
+    o = Object.assign(reste, { anyOf });
+  }
+  return o;
+}
+function outilsClaude(tools) {
+  return tools.map((t) => (t && t.input_schema ? Object.assign({}, t, { input_schema: schemaClaude(t.input_schema) }) : t));
+}
+
 /**
  * Un appel à Claude. Le repli serveur (« fallbacks ») relance la même requête
  * sur un autre modèle si le premier refuse pour raison de sécurité.
  */
 async function appeler(c, params) {
   verifierPlafond(c);
+  if (Array.isArray(params.tools)) params = Object.assign({}, params, { tools: outilsClaude(params.tools) });
   let rep;
   try {
     rep = await getClient().beta.messages.create(Object.assign({
