@@ -2,11 +2,11 @@
 // prospection de nouveaux clients et audit de la présence en ligne d'un prospect.
 //
 // Clé : ANTHROPIC_API_KEY (ou ANTHROPIC_API_KEY_PROSPECTION pour une clé dédiée).
-// Modèle : CLAUDE_MODEL, par défaut claude-opus-5-5.
+// Modèle : CLAUDE_MODEL, par défaut claude-sonnet-5-5.
 const { Anthropic } = require("@anthropic-ai/sdk");
 const { erreur, verifierPlafond } = require("./commun");
 
-const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
 
 // Tarifs publics en $ par million de jetons (entrée, sortie), pour l'estimation affichée
 const TARIFS = {
