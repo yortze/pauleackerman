@@ -82,7 +82,7 @@ Mot de passe admin par défaut : `paule-admin` (à changer dès la première con
    Sans clé, l'assistante concernée affiche simplement « clé manquante ». Garde-fou :
    1 million de tokens par jour et par assistante (`AI_DAILY_TOKENS`) ; une tâche
    en cours s'arrête si le budget est atteint. Modèles : Yann (recherche web, le
-   travail lourd) sur `claude-opus-5-5` (`CLAUDE_MODEL`) ; Nadia et Awa, aux tâches
+   travail lourd) sur `claude-sonnet-5-5` (`CLAUDE_MODEL`) ; Nadia et Awa, aux tâches
    simples, sur le modèle léger `gpt-5.4-mini` avec peu de réflexion
    (`OPENAI_MODEL_DIAGNOSTIC`, `OPENAI_MODEL_AGENDA`, `OPENAI_REASONING_EFFORT`).
 
