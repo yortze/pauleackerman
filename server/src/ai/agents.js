@@ -95,11 +95,13 @@ async function analyserMessage(message) {
 /* =========================================================================
    2. RECHERCHE : PROSPECTION ET AUDITS — Claude
 ========================================================================= */
+// Pas de « country » : la recherche web de Claude refuse le code GA (erreur 400).
+// La ville, le fuseau et les consignes suffisent à viser Libreville et le Gabon.
 const RECHERCHE_WEB = (max) => ({
   type: "web_search_20260209",
   name: "web_search",
   max_uses: max,
-  user_location: { type: "approximate", city: "Libreville", country: "GA", timezone: "Africa/Libreville" },
+  user_location: { type: "approximate", city: "Libreville", timezone: "Africa/Libreville" },
 });
 const LECTURE_WEB = (max) => ({ type: "web_fetch_20260209", name: "web_fetch", max_uses: max, max_content_tokens: 8000 });
 

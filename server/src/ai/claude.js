@@ -44,11 +44,14 @@ function cout(c) {
   return Math.round(((entree * t[0] + c.sortie * t[1]) / 1e6 + c.recherches * PRIX_RECHERCHE) * 10000) / 10000;
 }
 
+// Message de l'API sans le code HTTP ni le JSON brut autour
+function detail(e) { return (e.error && e.error.error && e.error.error.message) || e.message; }
+
 function traduire(e) {
   if (e instanceof Anthropic.AuthenticationError) return erreur(502, "La clé Claude est refusée : vérifiez ANTHROPIC_API_KEY.");
   if (e instanceof Anthropic.PermissionDeniedError) return erreur(502, "La clé Claude n’a pas accès à ce modèle.");
   if (e instanceof Anthropic.RateLimitError) return erreur(429, "Claude reçoit trop de demandes pour ce compte. Réessayez dans une minute.");
-  if (e instanceof Anthropic.BadRequestError) return erreur(502, "Requête refusée par l’API Claude : " + e.message);
+  if (e instanceof Anthropic.BadRequestError) return erreur(502, "Requête refusée par l’API Claude : " + detail(e));
   if (e instanceof Anthropic.APIConnectionError) return erreur(502, "Impossible de joindre l’API Claude. Réessayez.");
   if (e instanceof Anthropic.APIError) return erreur(502, "L’API Claude a renvoyé une erreur (" + e.status + "). Réessayez.");
   return e;
