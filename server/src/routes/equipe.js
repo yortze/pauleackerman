@@ -4,6 +4,7 @@ const { col } = require("../store");
 const { requireAdmin } = require("../middleware/auth");
 const ag = require("../agenda");
 const agents = require("../ai/agents");
+const pj = require("../ai/pieces");
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -29,7 +30,7 @@ router.post("/equipe/:agent", enveloppe(async (req, res) => {
   const b = req.body || {};
   const contexte = b.contexte && ["message", "prospect", "rdv"].indexOf(b.contexte.type) !== -1 && /^[\w-]{1,64}$/.test(String(b.contexte.id || ""))
     ? { type: b.contexte.type, id: String(b.contexte.id) } : null;
-  res.json(await agents.discuter(req.params.agent, b.texte, contexte));
+  res.json(await agents.discuter(req.params.agent, b.texte, contexte, b.pieces));
 }));
 
 router.delete("/equipe/:agent", enveloppe(async (req, res) => {
@@ -38,8 +39,41 @@ router.delete("/equipe/:agent", enveloppe(async (req, res) => {
   res.json({ ok: true });
 }));
 
-/* ---------------- Débriefs d'équipe ---------------- */
+/* ---------------- Pièces jointes (captures, documents) ---------------- */
 const ID_RE = /^[\w-]{1,64}$/;
+
+// Une pièce de 3 Mo fait environ 4 Mo en base64 : limite propre à cette route,
+// appliquée après la vérification de connexion (Vercel accepte 4,5 Mo par requête).
+const jsonPieces = express.json({ limit: "4400kb" });
+async function destination(pour) {
+  const s = String(pour || "");
+  const a = /^agent:([a-z]+)$/.exec(s);
+  if (a && Object.prototype.hasOwnProperty.call(agents.EQUIPE, a[1])) return s;
+  const d = /^debrief:([\w-]{1,64})$/.exec(s);
+  if (d && (await col("debriefs").get(d[1]))) return s;
+  const e = new Error("Discussion inconnue");
+  e.status = 400;
+  throw e;
+}
+router.post("/pieces", jsonPieces, enveloppe(async (req, res) => {
+  const b = req.body || {};
+  res.json(await pj.enregistrer(b, await destination(b.pour)));
+}));
+router.get("/pieces/:id", enveloppe(async (req, res) => {
+  const d = ID_RE.test(req.params.id) ? await col("pieces").get(req.params.id) : null;
+  if (!d) return res.status(404).json({ erreur: "Cette pièce jointe a expiré." });
+  res.set("Content-Disposition", "inline; filename*=UTF-8''" + encodeURIComponent(d.nom));
+  res.set("Cache-Control", "private, no-store");
+  if (d.type === "text/plain") return res.type("text/plain; charset=utf-8").send(d.texte);
+  res.type(d.type).send(Buffer.from(d.data, "base64"));
+}));
+// Pièce retirée avant l'envoi du message
+router.delete("/pieces/:id", enveloppe(async (req, res) => {
+  if (ID_RE.test(req.params.id)) await col("pieces").remove(req.params.id);
+  res.json({ ok: true });
+}));
+
+/* ---------------- Débriefs d'équipe ---------------- */
 async function contexteValide(c) {
   if (!c || ["message", "prospect"].indexOf(c.type) === -1 || !ID_RE.test(String(c.id || ""))) return null;
   const d = await col(c.type === "message" ? "messages" : "prospects").get(String(c.id));
@@ -67,11 +101,15 @@ router.get("/debriefs/:id", enveloppe(async (req, res) => {
   res.json(Object.assign(agents.debriefPublic(d), { messages: d.messages || [] }));
 }));
 
-router.post("/debriefs/:id", enveloppe(async (req, res) => res.json(await agents.debriefer(req.params.id, (req.body || {}).texte))));
+router.post("/debriefs/:id", enveloppe(async (req, res) => {
+  const b = req.body || {};
+  res.json(await agents.debriefer(req.params.id, b.texte, b.pieces));
+}));
 
 router.delete("/debriefs/:id", enveloppe(async (req, res) => {
-  await agents.lireDebrief(req.params.id);
+  const d = await agents.lireDebrief(req.params.id);
   await col("debriefs").remove(req.params.id);
+  await pj.supprimerPour("debrief:" + d._id);
   res.json({ ok: true });
 }));
 

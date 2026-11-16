@@ -52,6 +52,19 @@ function collection(name) {
         return false;
       }
     },
+    async removeMany(ids) {
+      const valides = (ids || []).map(String).filter((id) => mongoose.Types.ObjectId.isValid(id));
+      if (!valides.length) return 0;
+      return (await M.deleteMany({ _id: { $in: valides } })).deletedCount;
+    },
+    // Supprime les documents qui correspondent au filtre (égalités simples),
+    // créés avant opts.before (date ISO) si elle est donnée.
+    async removeWhere(filter, opts) {
+      const q = Object.assign({}, filter);
+      if (opts && opts.before) q.createdAt = { $lt: new Date(opts.before) };
+      if (!Object.keys(q).length) return 0;
+      return (await M.deleteMany(q)).deletedCount;
+    },
     async count(filter) {
       return M.countDocuments(filter || {});
     },

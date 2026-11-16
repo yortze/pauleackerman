@@ -19,6 +19,9 @@ Installation, déploiement et fonctionnement interne du portfolio. La présentat
   - **Débriefs d’équipe** : Paule réunit les trois sur un sujet ou un client ; Nadia et Yann répondent, puis
     Awa fait la synthèse (grands points, à faire). « @Nadia », « @Yann » ou « @Awa » : seule la personne citée répond
   - **Bloc-notes** : tâches à faire (client, échéance), cochées par Paule ou par Awa
+  - **Pièces jointes** : captures d’écran et documents (PDF, Word, Excel, PowerPoint, CSV, texte), joints
+    avec le trombone, collés ou glissés dans une discussion ou un débrief. Indispensables pour TikTok,
+    Facebook, Instagram et LinkedIn, qui bloquent la lecture web de Yann (voir Notes techniques)
 - **Prospects** : pipeline en colonnes (glisser-déposer), fiche détaillée, audit, message d'approche
 - **Agenda** : vue semaine, disponibilités, réservation d'appel depuis le site. Chaque rendez-vous
   peut s'ajouter tout seul à son Google Agenda, avec ses notifications (voir plus bas)
@@ -81,10 +84,12 @@ Mot de passe admin par défaut : `paule-admin` (à changer dès la première con
 
    Sans clé, l'assistante concernée affiche simplement « clé manquante ». Garde-fou :
    1 million de tokens par jour et par assistante (`AI_DAILY_TOKENS`) ; une tâche
-   en cours s'arrête si le budget est atteint. Modèles : Yann (recherche web, le
-   travail lourd) sur `claude-sonnet-5-5` (`CLAUDE_MODEL`) ; Nadia et Awa, aux tâches
-   simples, sur le modèle léger `gpt-5.4-mini` avec peu de réflexion
-   (`OPENAI_MODEL_DIAGNOSTIC`, `OPENAI_MODEL_AGENDA`, `OPENAI_REASONING_EFFORT`).
+   en cours s'arrête si le budget est atteint. Modèles : Yann (recherche web, captures,
+   PDF) sur `claude-haiku-5-5`, 20 fois moins cher que `claude-sonnet-5-5`, qui fouille
+   davantage (`CLAUDE_MODEL`) ; Nadia et Awa, aux tâches simples, sur le modèle léger
+   `gpt-5.4-mini` avec peu de réflexion (`OPENAI_MODEL_DIAGNOSTIC`, `OPENAI_MODEL_AGENDA`,
+   `OPENAI_REASONING_EFFORT`). Claude relit le début des conversations depuis son cache
+   (10 % du prix).
 
    Les trois clés Cloudinary se trouvent sur le dashboard, encadré *Product
    Environment Credentials*. On peut aussi coller la seule variable
@@ -149,3 +154,15 @@ bloque jamais une réservation ; elle s'affiche dans Réglages avec la marche à
 - Onglet Messages de l'admin : filtres (tous / non lus / lus / spam), recherche,
   pagination, « tout marquer comme lu » et bouton « Répondre » qui ouvre la
   messagerie de Paule avec la réponse déjà préparée.
+- Pièces jointes de l'équipe IA (`client/admin-pieces.js`, `server/src/ai/pieces.js`) :
+  préparées dans le navigateur avant l'envoi. Les images deviennent des JPEG de 2576 px
+  au plus (la résolution maximale de Claude). Word, Excel, PowerPoint et CSV sont
+  convertis en texte, sans leurs images : pour un document illustré, l'envoyer en PDF.
+  Les PDF partent tels quels, 3 Mo au plus (limite de 4,5 Mo par requête de Vercel).
+  Le serveur vérifie que le contenu correspond au type annoncé, puis stocke chaque
+  pièce en base (collection `pieces`). Il les efface au bout de 90 jours, quand la
+  discussion est effacée ou quand le débrief est supprimé. À chaque tour, l'assistante
+  relit les pièces des 6 derniers messages, 8 au plus. Les plus anciennes sont
+  remplacées par leur nom.
+- TikTok, Facebook, Instagram et LinkedIn bloquent la lecture web de Claude (robots).
+  Yann ne tente plus de les ouvrir et demande des captures d'écran du profil.

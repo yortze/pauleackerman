@@ -73,8 +73,24 @@
       var lAgents = $('[data-l="agents"]', panel), lDebriefs = $('[data-l="debriefs"]', panel), lOutils = $('[data-l="outils"]', panel);
       var equipe = [], debriefs = [], notes = [];
       var actif = params[0] === "debrief" && params[1] ? "debrief:" + params[1] : params[0] || "";
+      var saisieActive = null; // zone de saisie de la discussion ouverte (pour y déposer des fichiers)
 
       $('[data-a="nouveau"]', panel).addEventListener("click", function () { nouveauDebrief(); });
+
+      // Glisser-déposer des captures ou documents sur la discussion ouverte
+      function avecFichiers(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") !== -1; }
+      droite.addEventListener("dragover", function (e) {
+        if (!saisieActive || !avecFichiers(e)) return;
+        e.preventDefault();
+        droite.classList.add("depot");
+      });
+      droite.addEventListener("dragleave", function (e) { if (!droite.contains(e.relatedTarget)) droite.classList.remove("depot"); });
+      droite.addEventListener("drop", function (e) {
+        droite.classList.remove("depot");
+        if (!saisieActive || !avecFichiers(e)) return;
+        e.preventDefault();
+        saisieActive.pj.ajouter(e.dataTransfer.files);
+      });
 
       Promise.all([api("/api/crm/equipe"), api("/api/crm/debriefs"), api("/api/crm/notes")]).then(function (r) {
         equipe = r[0]; debriefs = r[1]; notes = r[2];
@@ -106,7 +122,7 @@
         equipe.forEach(function (a) {
           lAgents.appendChild(ligneContact(a.agent, ADM.avAgent(a.agent, "lg", ADM.statutAgent(a).dispo), a.prenom,
             a.dernier ? ADM.dateRel(a.dernier.date) : "", a.poste + " · " + a.fournisseur,
-            a.dernier ? (a.dernier.role === "user" ? "Vous : " : "") + a.dernier.texte : a.presentation));
+            a.dernier ? (a.dernier.role === "user" ? "Vous : " : "") + ADM.pieces.resume(a.dernier) : a.presentation));
         });
         lDebriefs.innerHTML = "";
         if (!debriefs.length) {
@@ -116,7 +132,7 @@
         }
         debriefs.forEach(function (d) {
           var der = d.dernier;
-          var apercu = der ? (der.role === "user" ? "Vous : " : (PRENOMS[der.agent] || "") + " : ") + der.texte : "Nadia, Yann et Awa";
+          var apercu = der ? (der.role === "user" ? "Vous : " : (PRENOMS[der.agent] || "") + " : ") + ADM.pieces.resume(der) : "Nadia, Yann et Awa";
           lDebriefs.appendChild(ligneContact("debrief:" + d.id, avGroupe("lg"), d.titre, der ? ADM.dateRel(der.date) : ADM.dateRel(d.creeLe),
             d.contexte ? d.contexte.label : "Sujet libre", apercu));
         });
@@ -127,6 +143,7 @@
       }
       function marquer(cle, hash) {
         actif = cle;
+        saisieActive = null;
         history.replaceState(null, "", "#equipe/" + hash);
         $$(".contact", panel).forEach(function (c) { c.classList.toggle("on", c.dataset.cle === cle); });
         boite.classList.add("detail");
@@ -139,25 +156,44 @@
         return api("/api/crm/notes").then(function (l) { notes = l; dessinerListe(); return l; });
       }
 
-      /* Zone de saisie commune aux discussions et aux débriefs */
-      function zoneSaisie(placeholder, note, surEnvoi) {
-        var compo = h('<div class="compose"><div class="compose-in"><div class="ctx-zone"></div><div class="compose-row">' +
+      /* Zone de saisie commune aux discussions et aux débriefs, avec ses pièces jointes.
+         `pour` : « agent:<assistante> » ou « debrief:<id> ». */
+      function zoneSaisie(placeholder, note, surEnvoi, pour) {
+        var compo = h('<div class="compose"><div class="compose-in"><div class="ctx-zone"></div><div class="pj-zone"></div><div class="compose-row">' +
           '<textarea rows="1" aria-label="Votre message"></textarea>' +
           '<button class="envoyer" disabled aria-label="Envoyer">' + ic("paper-plane-right") + "</button></div></div>" +
           '<div class="compose-note"></div></div>');
-        var zone = $("textarea", compo), bouton = $(".envoyer", compo);
+        var zone = $("textarea", compo), bouton = $(".envoyer", compo), pj = null, occupee = false;
         zone.placeholder = placeholder;
         $(".compose-note", compo).textContent = note;
         function ajuster() {
           zone.style.height = "auto";
           zone.style.height = Math.min(200, zone.scrollHeight) + "px";
-          bouton.disabled = !zone.value.trim();
+          bouton.disabled = occupee || (!zone.value.trim() && !(pj && pj.nombre()));
         }
+        /** Pendant que les pièces jointes finissent d'arriver avant l'envoi. */
+        function occuper(oui) {
+          occupee = oui;
+          zone.disabled = oui;
+          bouton.classList.toggle("occupe", oui);
+          bouton.innerHTML = ic(oui ? "circle-notch" : "paper-plane-right");
+          ajuster();
+        }
+        pj = ADM.pieces.brancher({ ligne: $(".compose-row", compo), zone: $(".pj-zone", compo), champ: zone, pour: pour, change: ajuster });
         zone.addEventListener("input", ajuster);
         zone.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); surEnvoi(); } });
         bouton.addEventListener("click", function () { surEnvoi(); });
         setTimeout(function () { if (innerWidth > 900) zone.focus(); }, 60);
-        return { el: compo, zone: zone, ctxZone: $(".ctx-zone", compo), ajuster: ajuster };
+        saisieActive = { pj: pj };
+        return { el: compo, zone: zone, ctxZone: $(".ctx-zone", compo), ajuster: ajuster, pj: pj, occuper: occuper };
+      }
+      /** Pièces jointes d'un message de Paule, au-dessus de sa bulle (la bulle disparaît s'il n'y a pas de texte). */
+      function avecPieces(b, pieces, garderBulle) {
+        if (!pieces || !pieces.length) return;
+        var c = b.parentNode.classList.contains("bulle-c") ? b.parentNode : null;
+        if (!c) { c = h('<div class="bulle-c"></div>'); b.parentNode.insertBefore(c, b); c.appendChild(b); }
+        c.insertBefore(ADM.pieces.liste(pieces), b);
+        if (!garderBulle) b.remove();
       }
       function pastillesActions(filIn, prenom, actions) {
         var faits = (actions || []).filter(function (x, i, t) { return t.findIndex(function (y) { return y.outil === x.outil && y.ok === x.ok; }) === i; });
@@ -204,7 +240,7 @@
         var filIn = $(".fil-in", fil);
         droite.appendChild(fil);
 
-        var saisie = zoneSaisie("Écrire à " + (a.prenom || "") + "…", (a.prenom || "") + " est une assistante IA : vérifiez ce qu’elle prépare avant de l’envoyer à un client.", envoyer);
+        var saisie = zoneSaisie("Écrire à " + (a.prenom || "") + "…", (a.prenom || "") + " est une assistante IA : vérifiez ce qu’elle prépare avant de l’envoyer à un client.", envoyer, "agent:" + agent);
         droite.appendChild(saisie.el);
         var zone = saisie.zone, ajuster = saisie.ajuster, ctxZone = saisie.ctxZone;
         var contexte = null;
@@ -246,8 +282,9 @@
           var b = $(".bulle", r);
           if (moi) {
             if (m.contexte) b.appendChild(h('<span class="ctx">' + ic("paperclip") + esc(LIB_CTX[m.contexte.type] || "Pièce jointe") + "</span>"));
-            b.appendChild(document.createTextNode(m.texte));
-            if (m.contexte) b.insertBefore(document.createElement("br"), b.lastChild);
+            b.appendChild(document.createTextNode(m.texte || ""));
+            if (m.contexte && m.texte) b.insertBefore(document.createElement("br"), b.lastChild);
+            avecPieces(b, m.pieces, !!(m.texte || m.contexte));
           } else if (m.erreur) b.textContent = m.texte;
           else b.innerHTML = ADM.markdown(m.texte);
           filIn.appendChild(r);
@@ -268,19 +305,29 @@
         var envoiEnCours = false;
         function envoyer() {
           var texte = zone.value.trim();
-          if (!texte || envoiEnCours) return;
+          if ((!texte && !saisie.pj.nombre()) || envoiEnCours) return;
           if (!a.configure) { ADM.toast(a.prenom + " attend sa clé " + a.fournisseur + " (voir Réglages).", "ko"); return; }
           if (!ADM.statutAgent(a).dispo) { ADM.toast(a.prenom + " a utilisé son budget de tokens du jour : elle reprend demain.", "ko"); return; }
           envoiEnCours = true;
+          if (saisie.pj.enCours()) saisie.occuper(true);
+          saisie.pj.pretes().then(function (pieces) {
+            saisie.occuper(false);
+            if (!texte && !pieces.length) { envoiEnCours = false; return; }
+            partir(texte, pieces);
+          });
+        }
+        function partir(texte, pieces) {
           var ctx = contexte;
-          bulle({ role: "user", texte: texte, date: new Date().toISOString(), contexte: ctx });
-          zone.value = ""; ajuster(); poserContexte(null);
+          bulle({ role: "user", texte: texte, date: new Date().toISOString(), contexte: ctx, pieces: pieces });
+          zone.value = ""; ajuster(); poserContexte(null); saisie.pj.vider();
           var ecrit = h('<div class="msg-r lui">' + ADM.avAgent(agent, "sm") + '<div class="bulle" style="padding:0"><div class="ecrit"><i></i><i></i><i></i></div></div></div>');
           var note = h('<div class="msg-meta"></div>');
-          note.textContent = ATTENTE[agent] || "";
+          note.textContent = pieces.length ? (a.prenom || "") + " lit vos pièces jointes…" : ATTENTE[agent] || "";
           filIn.appendChild(ecrit); filIn.appendChild(note);
           enBasDe(fil);
-          api("/api/crm/equipe/" + agent, { method: "POST", body: { texte: texte, contexte: ctx ? { type: ctx.type, id: ctx.id } : null } }).then(function (r) {
+          api("/api/crm/equipe/" + agent, { method: "POST", body: {
+            texte: texte, contexte: ctx ? { type: ctx.type, id: ctx.id } : null, pieces: pieces.map(function (p) { return p.id; }),
+          } }).then(function (r) {
             ecrit.remove(); note.remove();
             bulle(r.message);
             enBasDe(fil);
@@ -374,7 +421,7 @@
         var filIn = $(".fil-in", fil);
         droite.appendChild(fil);
         var saisie = zoneSaisie("Écrire à l’équipe…",
-          "Nadia et Yann répondent, puis Awa fait la synthèse. Vérifiez ce qu’elles préparent avant de l’envoyer à un client.", envoyer);
+          "Nadia et Yann répondent, puis Awa fait la synthèse. Vérifiez ce qu’elles préparent avant de l’envoyer à un client.", envoyer, "debrief:" + id);
         droite.appendChild(saisie.el);
         var zone = saisie.zone, ajuster = saisie.ajuster;
         var cibles = h('<div class="cibles"></div>');
@@ -414,7 +461,8 @@
             '<div class="bulle-c">' + (moi ? "" : '<span class="qui"></span>') + '<div class="bulle"></div></div></div>');
           if (!moi) $(".qui", r).textContent = prenom;
           var b = $(".bulle", r);
-          if (moi || m.erreur) b.textContent = m.texte; else b.innerHTML = ADM.markdown(m.texte);
+          if (moi || m.erreur) b.textContent = m.texte || ""; else b.innerHTML = ADM.markdown(m.texte);
+          if (moi) avecPieces(b, m.pieces, !!m.texte);
           filIn.appendChild(r);
           var meta = h('<div class="msg-meta"></div>');
           meta.textContent = m.date ? ADM.dateRel(m.date) : "";
@@ -432,13 +480,21 @@
         var envoiEnCours = false;
         function envoyer() {
           var texte = zone.value.trim();
-          if (!texte || envoiEnCours) return;
+          if ((!texte && !saisie.pj.nombre()) || envoiEnCours) return;
           var qui = citees(texte);
           var dispo = qui.filter(function (k) { return ADM.statutAgent(fiche(k)).dispo; });
           if (!dispo.length) { ADM.toast(qui.length > 1 ? "Aucune assistante n’est disponible (clé manquante ou budget du jour atteint)." : PRENOMS[qui[0]] + " n’est pas disponible.", "ko"); return; }
           envoiEnCours = true;
-          bulle({ role: "user", texte: texte, date: new Date().toISOString() });
-          zone.value = ""; ajuster();
+          if (saisie.pj.enCours()) saisie.occuper(true);
+          saisie.pj.pretes().then(function (pieces) {
+            saisie.occuper(false);
+            if (!texte && !pieces.length) { envoiEnCours = false; return; }
+            partir(texte, qui, pieces);
+          });
+        }
+        function partir(texte, qui, pieces) {
+          bulle({ role: "user", texte: texte, date: new Date().toISOString(), pieces: pieces });
+          zone.value = ""; ajuster(); saisie.pj.vider();
           var ecrit = h('<div class="msg-r lui"><span class="av-pile"></span><div class="bulle" style="padding:0"><div class="ecrit"><i></i><i></i><i></i></div></div></div>');
           qui.forEach(function (k) { $(".av-pile", ecrit).insertAdjacentHTML("beforeend", ADM.avAgent(k, "sm")); });
           var note = h('<div class="msg-meta"></div>');
@@ -448,7 +504,7 @@
             : listePrenoms(qui) + (qui.length > 1 ? " réfléchissent…" : " réfléchit…");
           filIn.appendChild(ecrit); filIn.appendChild(note);
           enBasDe(fil);
-          api("/api/crm/debriefs/" + id, { method: "POST", body: { texte: texte } }).then(function (r) {
+          api("/api/crm/debriefs/" + id, { method: "POST", body: { texte: texte, pieces: pieces.map(function (p) { return p.id; }) } }).then(function (r) {
             ecrit.remove(); note.remove();
             (r.reponses || []).forEach(bulle);
             enBasDe(fil);

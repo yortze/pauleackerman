@@ -22,7 +22,9 @@ async function createApp() {
   const app = express();
   app.set("trust proxy", true);
   app.use(cors());
-  app.use(express.json({ limit: "200kb" }));
+  // Les pièces jointes de l'équipe IA ont leur propre limite (routes/equipe.js), lue après la connexion
+  const json = express.json({ limit: "200kb" });
+  app.use((req, res, next) => (req.path.indexOf("/api/crm/pieces") === 0 ? next() : json(req, res, next)));
 
   // Documents uniques (profil, à propos) : lecture publique, écriture admin
   for (const key of ["profile", "apropos"]) {
