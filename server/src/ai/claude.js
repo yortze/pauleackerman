@@ -2,19 +2,25 @@
 // prospection de nouveaux clients et audit de la présence en ligne d'un prospect.
 //
 // Clé : ANTHROPIC_API_KEY (ou ANTHROPIC_API_KEY_PROSPECTION pour une clé dédiée).
-// Modèle : CLAUDE_MODEL, par défaut claude-sonnet-5-5.
+// Modèle : CLAUDE_MODEL, par défaut claude-haiku-5-5 (le moins cher ; il fait la recherche web,
+// lit les captures et les PDF). claude-sonnet-5-5 fait des recherches plus fouillées, 20 fois plus cher.
 const { Anthropic } = require("@anthropic-ai/sdk");
 const { erreur, verifierPlafond } = require("./commun");
 
-const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
+const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-5-5";
 
-// Tarifs publics en $ par million de jetons (entrée, sortie), pour l'estimation affichée
+// Tarifs publics en $ par million de jetons (entrée, sortie), pour l'estimation affichée.
+// Haiku 5.5 a deux grilles : la seconde s'applique aux appels dont le prompt dépasse 100 000 jetons.
 const TARIFS = {
-  "claude-opus-5-5": [4, 20],
-  "claude-sonnet-5-5": [2, 10],
-  "claude-haiku-5-5": [0.1, 0.5],
+  "claude-opus-5-5": { entree: 4, sortie: 20 },
+  "claude-sonnet-5-5": { entree: 2, sortie: 10 },
+  "claude-haiku-5-5": { entree: 0.1, sortie: 0.5, seuil: 100000, entreeLong: 0.5, sortieLong: 2.5 },
 };
 const PRIX_RECHERCHE = 10 / 1000; // 10 $ les 1 000 recherches web
+
+// Repli serveur (« fallbacks ») : un autre modèle reprend la requête si le premier refuse.
+// Haiku 5.5 n'en a pas : on n'envoie ni le paramètre ni l'en-tête bêta.
+const REPLI = /^claude-haiku/.test(MODEL) ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
 
 let client = null;
 function cle() { return process.env.ANTHROPIC_API_KEY_PROSPECTION || process.env.ANTHROPIC_API_KEY || ""; }
@@ -29,19 +35,26 @@ function getClient() {
 
 function cumuler(c, usage) {
   if (!usage) return;
+  const entree = usage.input_tokens || 0, sortie = usage.output_tokens || 0;
+  const lu = usage.cache_read_input_tokens || 0, ecrit = usage.cache_creation_input_tokens || 0;
   c.appels++;
-  c.entree += usage.input_tokens || 0;
-  c.sortie += usage.output_tokens || 0;
-  c.cacheLu += usage.cache_read_input_tokens || 0;
-  c.cacheEcrit += usage.cache_creation_input_tokens || 0;
+  c.entree += entree;
+  c.sortie += sortie;
+  c.cacheLu += lu;
+  c.cacheEcrit += ecrit;
   c.recherches += (usage.server_tool_use && usage.server_tool_use.web_search_requests) || 0;
-  c.jetons += (usage.input_tokens || 0) + (usage.output_tokens || 0) + (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0);
+  c.jetons += entree + sortie + lu + ecrit;
+  // Coût de cet appel, avec la grille qui correspond à la taille de son prompt
+  const t = TARIFS[MODEL];
+  if (t) {
+    const long = t.seuil && entree + lu + ecrit > t.seuil;
+    const pe = long ? t.entreeLong : t.entree, ps = long ? t.sortieLong : t.sortie;
+    c.coutJetons = (c.coutJetons || 0) + ((entree + ecrit * 1.25 + lu * 0.1) * pe + sortie * ps) / 1e6;
+  }
 }
 function cout(c) {
-  const t = TARIFS[MODEL];
-  if (!t) return null;
-  const entree = c.entree + c.cacheEcrit * 1.25 + c.cacheLu * 0.1;
-  return Math.round(((entree * t[0] + c.sortie * t[1]) / 1e6 + c.recherches * PRIX_RECHERCHE) * 10000) / 10000;
+  if (!TARIFS[MODEL]) return null;
+  return Math.round(((c.coutJetons || 0) + c.recherches * PRIX_RECHERCHE) * 10000) / 10000;
 }
 
 // Message de l'API sans le code HTTP ni le JSON brut autour
@@ -87,8 +100,8 @@ function outilsClaude(tools) {
 }
 
 /**
- * Un appel à Claude. Le repli serveur (« fallbacks ») relance la même requête
- * sur un autre modèle si le premier refuse pour raison de sécurité.
+ * Un appel à Claude. Sauf sur Haiku, le repli serveur (« fallbacks ») relance la même
+ * requête sur un autre modèle si le premier refuse pour raison de sécurité.
  */
 async function appeler(c, params) {
   verifierPlafond(c);
@@ -97,9 +110,10 @@ async function appeler(c, params) {
   try {
     rep = await getClient().beta.messages.create(Object.assign({
       model: MODEL,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-    }, params));
+      // Cache automatique : les tours suivants (recherches, outils, captures renvoyées)
+      // relisent le début de la conversation à 10 % du prix au lieu de le repayer.
+      cache_control: { type: "ephemeral" },
+    }, REPLI, params));
   } catch (e) {
     throw traduire(e);
   }

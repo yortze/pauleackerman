@@ -79,10 +79,12 @@ retrouve tout de suite et peut écrire à Paule sans quitter la page.
 | Assistante | Rôle | Modèle |
 |---|---|---|
 | **Nadia** | Analyse chaque demande et prépare la réponse par email ou WhatsApp | OpenAI (léger) |
-| **Yann** | Cherche des entreprises sur le web et audite leur présence en ligne pour trouver de nouveaux clients | Claude |
+| **Yann** | Cherche des entreprises sur le web et audite leur présence en ligne pour trouver de nouveaux clients | Claude (Haiku) |
 | **Awa** | Bras droit : agenda et relances, conseil sur les prix, les marges et les attentes des clients, bloc-notes des tâches | OpenAI (léger) |
 
 Paule peut aussi les réunir en **débrief d'équipe** sur un client : chacune donne son avis, puis Awa fait la synthèse et note les tâches à faire.
+
+Elle leur joint des **captures d'écran et des documents** (PDF, Word, Excel, PowerPoint) : Yann audite par exemple un compte TikTok ou Facebook à partir des captures du profil, ces réseaux bloquant la lecture automatique.
 
 Un budget d'un million de tokens par jour et par assistante garde la facture sous contrôle.
 

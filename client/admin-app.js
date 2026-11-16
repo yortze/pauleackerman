@@ -272,7 +272,7 @@
         var b = h('<a class="sb-agent" href="#equipe/' + a.agent + '">' + ADM.avAgent(a.agent, "sm", ADM.statutAgent(a).dispo) +
           "<span><b></b><small></small></span></a>");
         $("b", b).textContent = a.prenom;
-        $("small", b).textContent = a.dernier ? ADM.court(a.dernier.texte, 40) : a.poste;
+        $("small", b).textContent = a.dernier ? ADM.court(ADM.pieces ? ADM.pieces.resume(a.dernier) : a.dernier.texte, 40) : a.poste;
         b.addEventListener("click", function () { $("#appView").classList.remove("menu-ouvert"); });
         box.appendChild(b);
       });
@@ -645,7 +645,7 @@
             '<span class="btn sm soft">' + ic("chat-circle-dots") + "Discuter</span></div></a>");
           $(".haut b", c).textContent = a.prenom;
           $(".haut small", c).textContent = a.poste;
-          $("p", c).textContent = a.dernier ? (a.dernier.role === "assistant" ? "" : "Vous : ") + a.dernier.texte : a.presentation;
+          $("p", c).textContent = a.dernier ? (a.dernier.role === "assistant" ? "" : "Vous : ") + (ADM.pieces ? ADM.pieces.resume(a.dernier) : a.dernier.texte) : a.presentation;
           strip.appendChild(c);
         });
         panel.appendChild(strip);

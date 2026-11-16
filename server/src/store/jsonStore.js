@@ -1,5 +1,5 @@
 // Driver de stockage fichier (fallback sans MongoDB).
-// Même interface que mongoStore : all / get / insert / update / remove / findOne / replaceAll
+// Même interface que mongoStore : all / get / insert / update / remove / removeMany / removeWhere / findOne / replaceAll
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -56,6 +56,21 @@ function collection(name) {
       const next = docs.filter((d) => d._id !== id);
       save(name, next);
       return next.length !== docs.length;
+    },
+    async removeMany(ids) {
+      const cibles = new Set((ids || []).map(String));
+      const docs = load(name);
+      const next = docs.filter((d) => !cibles.has(d._id));
+      if (next.length !== docs.length) save(name, next);
+      return docs.length - next.length;
+    },
+    async removeWhere(filter, opts) {
+      const avant = opts && opts.before;
+      if (!Object.keys(filter || {}).length && !avant) return 0;
+      const docs = load(name);
+      const next = docs.filter((d) => !(Object.entries(filter || {}).every(([k, v]) => d[k] === v) && (!avant || String(d.createdAt || "") < avant)));
+      if (next.length !== docs.length) save(name, next);
+      return docs.length - next.length;
     },
     async count(filter) {
       return (await this.all(filter)).length;
