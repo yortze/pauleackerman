@@ -12,8 +12,8 @@ const route = o.enveloppe("seo");
 
 const CLE = "seo";
 const SEO_DEFAUT = {
-  titre: "Paule Ackerman — Community manager & social media manager à Libreville",
-  description: "Paule Ackerman, community manager et social media manager à Libreville (Gabon) : gestion de vos réseaux sociaux, création de contenu, montage vidéo, visuels et identité visuelle. Devis rapide par message ou WhatsApp.",
+  titre: "Paule Ackerman — Community manager à Libreville (Gabon)",
+  description: "Community manager à Libreville : gestion de vos réseaux sociaux, création de contenu, montage vidéo et visuels. Devis rapide par message ou WhatsApp.",
   motsCles: ["community manager Libreville", "social media manager Gabon", "création de contenu Libreville", "montage vidéo Gabon"],
   verificationGoogle: "",
   ficheGoogle: "",
