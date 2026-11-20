@@ -13,8 +13,16 @@
       "destination": "/api/index"
     },
     {
+      "source": "/:fichier(google[0-9a-zA-Z]+\\.html)",
+      "destination": "/api/index"
+    },
+    {
       "source": "/admin",
       "destination": "/admin.html"
+    },
+    {
+      "source": "/lien/:jeton",
+      "destination": "/lien.html"
     }
   ],
   "headers": [
@@ -39,11 +47,25 @@
           "value": "public, max-age=0, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/lien/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
+      ]
     }
   ],
   "functions": {
     "api/index.js": {
       "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/brief",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

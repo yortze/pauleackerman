@@ -6,6 +6,7 @@ const { requireAdmin } = require("../middleware/auth");
 const ag = require("../agenda");
 const agents = require("../ai/agents");
 const gagenda = require("../googleAgenda");
+const compta = require("../compta");
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -49,6 +50,28 @@ router.get("/dashboard", enveloppe(async (_req, res) => {
   const gagnes = messages.filter((m) => m.statut === "gagne").length + prospects.filter((p) => p.statut === "gagne").length;
   const valeurGagnee = messages.concat(prospects).filter((x) => x.statut === "gagne").reduce((s, x) => s + (Number(x.valeur) || 0), 0);
 
+  // Clients, calendrier éditorial, argent, avis et mémoire à valider
+  const [clients, planning, avisRecus, memoire, fin] = await Promise.all([
+    col("clients").all(), col("planning").all(), col("avis_recus").all(), col("memoire").all(), compta.finances(auj.slice(0, 4)),
+  ]);
+  const nomClient = (id) => (clients.find((x) => String(x._id) === id) || {}).nom || "";
+  const dans14 = ag.ajouterJours(auj, 14);
+  const travail = {
+    clientsActifs: clients.filter((x) => (x.statut || "actif") === "actif").length,
+    aPublier: planning.filter((p) => p.date === auj && p.statut !== "publie")
+      .map((p) => ({ id: String(p._id), client: nomClient(p.clientId), reseau: p.reseau, format: p.format, sujet: p.sujet || "", statut: p.statut, heure: p.heure || "" })),
+    aValider: planning.filter((p) => p.statut === "a_valider").length,
+    modifs: planning.filter((p) => p.statut === "creation" && p.validation && p.validation.decision === "modif")
+      .map((p) => ({ id: String(p._id), client: nomClient(p.clientId), sujet: p.sujet || p.format, date: p.date })),
+    renouvellements: clients.filter((x) => (x.statut || "actif") === "actif" && x.renouvellement && x.renouvellement >= auj && x.renouvellement <= dans14)
+      .map((x) => ({ id: String(x._id), nom: x.nom, date: x.renouvellement })),
+    avisAValider: avisRecus.filter((a) => a.statut === "a_valider").length,
+    memoireAValider: memoire.filter((m) => m.statut === "proposee").length,
+  };
+  const argent = {
+    encaisseMois: fin.moisCourant.encaisse, aEncaisser: fin.aEncaisser, enRetard: fin.enRetard, devisEnAttente: fin.devisEnAttente, recurrent: fin.recurrent,
+  };
+
   res.json({
     aujourdhui: auj,
     demandes: {
@@ -60,7 +83,7 @@ router.get("/dashboard", enveloppe(async (_req, res) => {
       parStatut: parStatut(messages, "nouveau"),
     },
     prospects: { total: prospects.length, parStatut: parStatut(prospects, "a_contacter") },
-    gagnes, valeurGagnee,
+    gagnes, valeurGagnee, travail, argent,
     aConfirmer: (await ag.rdvActifs()).filter((r) => r.statut === "a_confirmer" && new Date(r.debut).getTime() >= Date.now() - 3600000).length,
     relances: await agents.relancesJusqua(auj),
     rdvs,

@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Disallow: /lien/
 
 Sitemap: https://www.pauleackerman.com/sitemap.xml

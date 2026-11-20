@@ -181,7 +181,7 @@ async function discuter(c, { system, messages, tools, executer, effort, maxTours
       for (const a of appels) {
         try {
           const r = await executer(a.name, a.input || {});
-          actions.push({ outil: a.name, entree: a.input, ok: true });
+          actions.push({ outil: a.name, entree: a.input, ok: true, resultat: r });
           resultats.push({ type: "tool_result", tool_use_id: a.id, content: JSON.stringify(r) });
         } catch (e) {
           actions.push({ outil: a.name, entree: a.input, ok: false, erreur: e.message });

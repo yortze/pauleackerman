@@ -233,6 +233,7 @@
     });
     return qrCharge;
   }
+  ADM.chargerQr = chargerQr;
   function montrerQr(lien) {
     var corps = h('<div style="text-align:center"><p class="muted" style="font-size:13.5px;margin-top:12px"></p><div class="qr"><span class="spin"></span></div>' +
       '<div class="acts-l" style="justify-content:center"></div></div>');

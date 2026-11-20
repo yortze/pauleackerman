@@ -119,7 +119,7 @@ async function boucle(agent, c, { instructions, input, tools, executer, maxTours
       } else {
         try {
           sortie = await executer(a.name, args);
-          actions.push({ outil: a.name, entree: args, ok: true });
+          actions.push({ outil: a.name, entree: args, ok: true, resultat: sortie });
         } catch (e) {
           sortie = { erreur: e.message };
           actions.push({ outil: a.name, entree: args, ok: false, erreur: e.message });
