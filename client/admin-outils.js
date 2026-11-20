@@ -77,7 +77,9 @@
         });
         bouton("trash", n.statut === "proposee" ? "Écarter" : "Oublier", "danger", function () {
           if (n.statut === "active" && !confirm("Oublier cette note ? L’équipe ne s’en servira plus.")) return;
-          api("/api/crm/memoire/" + n._id, { method: "DELETE" }).then(function () { ADM.panneauMemoire(zone, surMaj); if (surMaj) surMaj(); ADM.rafraichirCompteurs(); });
+          api("/api/crm/memoire/" + n._id + (n.statut === "proposee" ? "?si=proposee" : ""), { method: "DELETE" })
+            .catch(function (e) { ADM.toast(e.message, "ko"); })
+            .then(function () { ADM.panneauMemoire(zone, surMaj); if (surMaj) surMaj(); ADM.rafraichirCompteurs(); });
         });
         return l;
       }

@@ -262,9 +262,11 @@
               .catch(function () { fini("deja"); });
           });
           bt[1].addEventListener("click", function () {
-            api("/api/crm/memoire/" + x.memoire.id, { method: "DELETE" }).then(function () { fini("non"); ADM.rafraichirCompteurs(); }).catch(function () { fini("deja"); });
+            api("/api/crm/memoire/" + x.memoire.id + "?si=proposee", { method: "DELETE" }).then(function () { fini("non"); ADM.rafraichirCompteurs(); }).catch(function () { fini("deja"); });
           });
           filIn.appendChild(b);
+          // Proposition déjà traitée (historique rechargé) : on affiche son état, sans boutons
+          api("/api/crm/memoire/" + x.memoire.id).then(function (n) { if (n.statut !== "proposee") fini("ok"); }).catch(function () { fini("non"); });
         });
       }
       /** Pouce levé / « à corriger » sous une réponse : la correction devient une leçon de la mémoire. */
