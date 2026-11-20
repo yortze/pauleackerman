@@ -175,7 +175,9 @@ kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line-2);bord
 .login .err{color:var(--bad);font-size:13px;min-height:18px;margin-top:8px;text-align:left}
 .login-card p.login-aide{font-size:12.5px;color:var(--ink-3);margin:8px 0 0;text-align:left;line-height:1.5}
 #code2fa{font-size:20px;letter-spacing:.18em;text-align:center;font-variant-numeric:tabular-nums}
-.login-retour{display:inline-block;margin-top:10px;font-size:12.5px;color:var(--ink-2);background:none;border:none;cursor:pointer}
+.login-retour{display:block;margin:12px auto 0;font-size:12.5px;color:var(--ink-2);background:none;border:none;cursor:pointer}
+.login-retour:hover{color:var(--ink)}
+.login-retour+.login-site{margin-top:8px}
 .login-site{display:inline-block;margin-top:16px;font-size:12.5px;color:var(--ink-3)}
 .login-site:hover{color:var(--ink)}
 
@@ -490,9 +492,11 @@ button.tuile:hover{border-color:var(--accent-line)}
 .suites button{display:inline-flex;align-items:center;gap:6px;max-width:100%;border:1px solid var(--line-2);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink-2);text-align:left;transition:border-color .15s,color .15s}
 .suites button:hover{border-color:var(--accent);color:var(--accent)}
 .suites button .ph-duotone{flex:0 0 auto;color:var(--accent)}
-.memo-prop{display:flex;align-items:center;gap:10px;margin:6px 0 0 46px;max-width:580px;padding:10px 12px;border:1px dashed var(--accent);border-radius:14px;background:var(--accent-soft)}
+.memo-prop{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:6px 0 0 46px;max-width:580px;padding:10px 12px;border:1px dashed var(--accent);border-radius:14px;background:var(--accent-soft)}
 .memo-prop>.ph-duotone{font-size:20px;color:var(--accent);flex:0 0 auto}
-.memo-prop .grow{flex:1;min-width:0}
+.memo-prop .grow{flex:1 1 200px;min-width:0}
+.memo-prop .acts{margin-left:auto}
+.note .ico-rond{border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent);flex:0 0 auto}
 .memo-prop small{font-size:11.5px;color:var(--ink-3)}
 .memo-prop p{font-size:13.5px;margin-top:1px;word-break:break-word}
 .memo-prop .acts{display:flex;gap:6px;flex:0 0 auto}
@@ -511,7 +515,7 @@ button.tuile:hover{border-color:var(--accent-line)}
 .seo-pt{align-items:flex-start}
 .seo-pt .ico-rond{width:30px;height:30px;background:var(--warn-soft);color:var(--warn)}
 .seo-pt.ok .ico-rond{background:var(--ok-soft);color:var(--ok)}
-.seo-pt small{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:2px}
+.ligne.seo-pt .grow small{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:2px;white-space:normal;overflow:visible;text-overflow:clip}
 .seo-pt .btn{flex:0 0 auto}
 .serp{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:6px;background:var(--surface)}
 .serp-site{display:flex;align-items:center;gap:10px;margin-bottom:6px}
@@ -1547,12 +1551,12 @@ function dateCourte(iso) {
 }
 
 </script>
-<script src="/admin-app.js?v=2026-11-20b"></script>
-<script src="/admin-pieces.js?v=2026-11-20b"></script>
-<script src="/admin-vues.js?v=2026-11-20b"></script>
-<script src="/admin-clients.js?v=2026-11-20b"></script>
-<script src="/admin-travail.js?v=2026-11-20b"></script>
-<script src="/admin-outils.js?v=2026-11-20b"></script>
+<script src="/admin-app.js?v=2026-11-20c"></script>
+<script src="/admin-pieces.js?v=2026-11-20c"></script>
+<script src="/admin-vues.js?v=2026-11-20c"></script>
+<script src="/admin-clients.js?v=2026-11-20c"></script>
+<script src="/admin-travail.js?v=2026-11-20c"></script>
+<script src="/admin-outils.js?v=2026-11-20c"></script>
 <script src="/admin-audience.js?v=2026-11-13c"></script>
 </body>
 </html>

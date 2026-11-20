@@ -37,8 +37,20 @@ router.put("/memoire/:id", route(async (req, res) => {
   if (b.statut === "active") { x.statut = "active"; x.valideeLe = new Date().toISOString(); }
   res.json(await col("memoire").update(n._id, x));
 }));
+/** État d'une note (une proposition affichée dans une discussion a pu être traitée depuis). */
+router.get("/memoire/:id", route(async (req, res) => {
+  const n = o.ID_RE.test(req.params.id) ? await col("memoire").get(req.params.id) : null;
+  if (!n) throw o.erreur(404, "Note introuvable");
+  res.json({ id: String(n._id), statut: n.statut, texte: n.texte });
+}));
 router.delete("/memoire/:id", route(async (req, res) => {
   if (!o.ID_RE.test(req.params.id)) throw o.erreur(404, "Introuvable");
+  // « Non » sur une proposition : ne jamais effacer une note que Paule a déjà retenue
+  if (req.query.si === "proposee") {
+    const n = await col("memoire").get(req.params.id);
+    if (!n) throw o.erreur(404, "Déjà écartée");
+    if (n.statut !== "proposee") throw o.erreur(409, "Déjà retenue : retirez-la depuis la mémoire de l’équipe");
+  }
   res.json({ ok: await col("memoire").remove(req.params.id) });
 }));
 /** Awa tire la leçon d'une affaire gagnée ou perdue (propositions à valider). */
