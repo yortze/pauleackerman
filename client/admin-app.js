@@ -22,6 +22,7 @@
   ADM.EQUIPE = {
     diagnostic: { prenom: "Nadia", cls: "nadia", poste: "Relation client" },
     prospection: { prenom: "Yann", cls: "yann", poste: "Développement commercial" },
+    contenu: { prenom: "Léa", cls: "lea", poste: "Contenu et bilans" },
     agenda: { prenom: "Awa", cls: "awa", poste: "Bras droit · agenda et conseil" },
   };
   ADM.avAgent = function (agent, taille, enLigne) {
@@ -161,6 +162,11 @@
       m.appendChild(b);
     });
     var c = ajouterCouche(m, { sansVoile: true });
+    // Au-dessus de l'ancre quand la place manque en dessous (zone de saisie en bas d'écran)
+    var haut = m.offsetHeight, dessous = innerHeight - r.bottom - 14, dessus = r.top - 14;
+    if (haut > dessous && dessus > dessous) { m.style.top = Math.max(8, r.top - 6 - Math.min(haut, dessus)) + "px"; m.style.maxHeight = dessus + "px"; }
+    else { m.style.top = r.bottom + 6 + "px"; m.style.maxHeight = Math.max(120, dessous) + "px"; }
+    m.style.overflowY = "auto";
     setTimeout(function () {
       document.addEventListener("click", function f(e) { if (!m.contains(e.target)) { document.removeEventListener("click", f); if (COUCHES.indexOf(c) !== -1) ADM.fermer(c); } });
     }, 0);
@@ -175,6 +181,9 @@
     { id: "messages", label: "Messages", icone: "chat-circle-text", badge: "nonLues" },
     { id: "equipe", label: "Équipe IA", icone: "users-three" },
     { id: "prospects", label: "Prospects", icone: "target", badge: "aContacter" },
+    { id: "clients", label: "Clients", icone: "address-book" },
+    { id: "calendrier", label: "Calendrier", icone: "calendar-blank", badge: "modifs", badgeCls: "chaud" },
+    { id: "finances", label: "Finances", icone: "wallet", badge: "retards", badgeCls: "chaud" },
     { id: "agenda", label: "Agenda", icone: "calendar-dots", badge: "aConfirmer", badgeCls: "chaud" },
     { id: "audience", label: "Audience", icone: "chart-line-up" },
     { sec: "Mon site" },
@@ -187,6 +196,7 @@
     { id: "site/avis", label: "Avis clients", icone: "quotes" },
     { id: "profil", label: "Profil", icone: "user-circle" },
     { id: "apropos", label: "À propos", icone: "identification-card" },
+    { id: "seo", label: "Référencement", icone: "google-logo" },
     { sec: "Compte" },
     { id: "reglages", label: "Réglages", icone: "gear-six" },
   ];
@@ -257,6 +267,8 @@
       ADM.etat.compteurs = {
         nonLues: d.demandes.nonLues, aConfirmer: d.aConfirmer || 0,
         aContacter: (d.prospects.parStatut || {}).a_contacter || 0, relances: (d.relances || []).length,
+        modifs: ((d.travail || {}).modifs || []).length, retards: ((d.argent || {}).enRetard || {}).nb || 0,
+        memoire: (d.travail || {}).memoireAValider || 0,
       };
       ADM.majBadges();
       return d;
@@ -338,13 +350,19 @@
   /* ----------------------------------------------------------------------
      Palette de commandes (Ctrl/⌘ K)
   ---------------------------------------------------------------------- */
-  var ICONES_TYPE = { message: "chat-circle-text", prospect: "target", rdv: "calendar-dots", post: "squares-four", creation: "palette", etude: "book-open-text", equipe: "users-three" };
-  var LIB_TYPE = { message: "Demandes", prospect: "Prospects", rdv: "Rendez-vous", post: "Publications", creation: "Créations", etude: "Études de cas", equipe: "Conversations" };
+  var ICONES_TYPE = { message: "chat-circle-text", prospect: "target", rdv: "calendar-dots", post: "squares-four", creation: "palette", etude: "book-open-text", equipe: "users-three",
+    client: "address-book", document: "receipt", planning: "calendar-blank" };
+  var LIB_TYPE = { message: "Demandes", prospect: "Prospects", rdv: "Rendez-vous", post: "Publications du site", creation: "Créations", etude: "Études de cas", equipe: "Conversations",
+    client: "Clients", document: "Devis et factures", planning: "Calendrier éditorial" };
   function commandes() {
     var c = [
       { g: "Actions", icone: "chat-circle-dots", titre: "Discuter avec Nadia", sous: "Relation client", action: function () { ADM.aller("equipe/diagnostic"); } },
       { g: "Actions", icone: "chat-circle-dots", titre: "Discuter avec Yann", sous: "Prospection", action: function () { ADM.aller("equipe/prospection"); } },
       { g: "Actions", icone: "chat-circle-dots", titre: "Discuter avec Awa", sous: "Agenda, conseil et bloc-notes", action: function () { ADM.aller("equipe/agenda"); } },
+      { g: "Actions", icone: "chat-circle-dots", titre: "Discuter avec Léa", sous: "Légendes, idées de contenu et bilans", action: function () { ADM.aller("equipe/contenu"); } },
+      { g: "Actions", icone: "user-plus", titre: "Nouveau client", action: function () { if (ADM.formClient) ADM.formClient(null, function (c) { ADM.aller("clients/" + c._id); }); } },
+      { g: "Actions", icone: "calendar-plus", titre: "Nouvelle publication au calendrier", action: function () { if (ADM.editerPublication) ADM.editerPublication(null, { date: ADM.aujourdhui() }); } },
+      { g: "Actions", icone: "receipt", titre: "Préparer les factures du mois", action: function () { ADM.aller("finances"); } },
       { g: "Actions", icone: "calendar-plus", titre: "Nouveau rendez-vous", action: function () { if (ADM.nouveauRdv) ADM.nouveauRdv(); else ADM.aller("agenda"); } },
       { g: "Actions", icone: "plus-square", titre: "Nouvelle publication", action: function () { ADM.aller("site/posts/nouveau"); } },
       { g: "Actions", icone: "magnifying-glass-plus", titre: "Trouver des prospects", action: function () { ADM.aller("prospects/trouver"); } },
@@ -415,6 +433,9 @@
     else if (r.type === "post") ADM.aller("site/posts");
     else if (r.type === "creation") ADM.aller("site/creations");
     else if (r.type === "etude") ADM.aller("site/etudes");
+    else if (r.type === "client") ADM.aller("clients/" + r.id);
+    else if (r.type === "document") { if (ADM.ouvrirDocument) ADM.ouvrirDocument(r.id); }
+    else if (r.type === "planning") ADM.aller("calendrier/" + r.id);
   }
 
   /* ----------------------------------------------------------------------
@@ -430,7 +451,8 @@
     }).catch(function () { return []; });
   };
   ADM.ouvrirEvenement = function (e) {
-    if (e.type === "message") ADM.aller("messages/" + e.id);
+    if (e.lien) ADM.aller(e.lien);
+    else if (e.type === "message") ADM.aller("messages/" + e.id);
     else if (e.type === "rdv") ADM.aller("agenda/rdv/" + e.id);
     else if (e.type === "prospect") ADM.aller("prospects/" + e.id);
     else if (e.type === "ia") ADM.aller("equipe/" + e.id);
@@ -610,7 +632,7 @@
           '<p class="hero-salut"></p>' +
           '<div class="hero-stats">' +
           '<a class="hero-stat" href="#messages"><b>' + ADM.nombre(d.demandes.mois) + "</b><span>demandes (30 j)</span></a>" +
-          '<a class="hero-stat" href="#prospects"><b>' + ADM.nombre(d.gagnes) + "</b><span>clients gagnés</span></a>" +
+          '<a class="hero-stat" href="#clients"><b>' + ADM.nombre((d.travail || {}).clientsActifs || 0) + "</b><span>clients actifs</span></a>" +
           '<a class="hero-stat" href="#prospects"><b>' + ADM.nombre(d.prospects.total) + "</b><span>prospects</span></a>" +
           '<a class="hero-stat" href="#audience"><b>' + ADM.nombre(visites30) + "</b><span>visites (30 j)</span></a>" +
           "</div>" +
@@ -631,7 +653,7 @@
         var alertes = [];
         var ia = d.ia.agents;
         if (!ia.prospection.configure) alertes.push("Yann (prospection) attend sa clé : ajoutez ANTHROPIC_API_KEY dans Vercel.");
-        if (!ia.diagnostic.configure) alertes.push("Nadia et Awa attendent leur clé : ajoutez OPENAI_API_KEY dans Vercel.");
+        if (!ia.diagnostic.configure) alertes.push("Nadia, Léa et Awa attendent leur clé : ajoutez OPENAI_API_KEY dans Vercel.");
         if (!d.alertesEmail) alertes.push("Alertes email inactives : ajoutez RESEND_API_KEY et NOTIFY_EMAIL pour être prévenue de chaque demande.");
         if (alertes.length) panel.appendChild(h('<div class="hint alerte">' + ic("info") + "<div>" + alertes.map(esc).join("<br>") + "</div></div>"));
 
@@ -678,6 +700,26 @@
           $("small", l).textContent = rl.note || rl.besoin || (rl.type === "message" ? "Demande reçue" : "Prospect");
           fb.appendChild(l);
         });
+        // Clients : publications du jour, modifications demandées, factures en retard, renouvellements, avis, mémoire
+        var tr = d.travail || {}, ar = d.argent || {};
+        function aFaire(lien, icone, cls, titre, sous, pill) {
+          n++;
+          var l = h('<a class="ligne cliquable"><span class="ico-rond ' + (cls || "") + '">' + ic(icone) + '</span><div class="grow"><b></b><small></small></div>' + (pill ? '<span class="pill ' + (cls || "") + '"></span>' : "") + "</a>");
+          l.href = "#" + lien;
+          $("b", l).textContent = titre;
+          $("small", l).textContent = sous || "";
+          if (pill) $(".pill", l).textContent = pill;
+          fb.appendChild(l);
+        }
+        (tr.aPublier || []).forEach(function (p) {
+          aFaire("calendrier/" + p.id, "megaphone", p.statut === "valide" ? "ok" : "chaud", "Publier pour " + p.client + (p.heure ? " à " + p.heure : ""),
+            p.reseau + " · " + p.format + (p.sujet ? " · " + p.sujet : ""), p.statut === "valide" ? "validée" : p.statut === "a_valider" ? "pas encore validée" : "à finir");
+        });
+        (tr.modifs || []).forEach(function (p) { aFaire("calendrier/" + p.id, "pencil-simple-line", "ko", p.client + " demande une modification", p.sujet || "", "à reprendre"); });
+        ((ar.enRetard || {}).liste || []).slice(0, 4).forEach(function (f) { aFaire("finances", "receipt", "ko", "Relancer " + f.client + " pour la facture " + f.numero, ADM.fcfa(f.reste) + " à payer depuis le " + f.echeance, "impayée"); });
+        (tr.renouvellements || []).forEach(function (c) { aFaire("clients/" + c.id, "arrows-clockwise", "chaud", "Renouvellement de " + c.nom, "le " + ADM.jourLong(c.date), "à préparer"); });
+        if (tr.avisAValider) aFaire("clients", "star", "chaud", tr.avisAValider + " avis client" + (tr.avisAValider > 1 ? "s" : "") + " à publier", "Clients → Avis reçus");
+        if (tr.memoireAValider) aFaire("equipe/memoire", "brain", "", "L’équipe propose de retenir " + tr.memoireAValider + " chose" + (tr.memoireAValider > 1 ? "s" : ""), "Validez ou corrigez dans la mémoire de l’équipe");
         if (!n) fb.appendChild(h('<div class="empty" style="padding:30px 16px">' + ic("coffee") + "Rien d’urgent. Profitez-en pour publier ou prospecter.</div>"));
         $(".sec-h small", faire).textContent = n ? n + " élément" + (n > 1 ? "s" : "") : "";
 
@@ -689,6 +731,19 @@
         grille.appendChild(faire);
         grille.appendChild(act);
         panel.appendChild(grille);
+
+        /* --- L'argent du mois --- */
+        if (d.argent) {
+          var ta = h('<div class="tuiles"></div>');
+          [["Encaissé ce mois", ADM.fcfa(d.argent.encaisseMois)], ["À encaisser", ADM.fcfa(d.argent.aEncaisser.montant)],
+            ["Revenu mensuel récurrent", ADM.fcfa(d.argent.recurrent.montant)], ["Devis en attente", ADM.fcfa(d.argent.devisEnAttente.montant)]].forEach(function (x) {
+            var t2 = h('<a class="tuile" href="#finances"><div class="lab"></div><b class="val"></b></a>');
+            $(".lab", t2).textContent = x[0]; $(".val", t2).textContent = x[1];
+            ta.appendChild(t2);
+          });
+          panel.appendChild(h('<div class="bar" style="margin:22px 0 10px"><h2 style="font-size:16px">Votre argent</h2><a class="btn ghost sm" href="#finances">Voir les finances' + ic("caret-right") + "</a></div>"));
+          panel.appendChild(ta);
+        }
 
         /* --- Le site sur 30 jours --- */
         if (au && ADM.tuileDelta) {
@@ -845,6 +900,14 @@
     var bNadia = h('<button class="btn soft">' + ADM.avAgent("diagnostic", "sm") + "Demander à Nadia</button>");
     bNadia.addEventListener("click", function () { ADM.ouvrirEquipe("diagnostic", { contexte: { type: "message", id: m._id, label: "Demande de " + (m.nom || "Anonyme") }, texte: "Analyse cette demande et prépare-moi une réponse." }); });
     acts.appendChild(bNadia);
+    var bClient = h('<button class="btn">' + ic("address-book") + (m.clientId ? "Fiche client" : "Créer la fiche client") + "</button>");
+    bClient.addEventListener("click", function () { if (m.clientId) ADM.aller("clients/" + m.clientId); else ADM.creerClientDepuis("message", m._id); });
+    acts.appendChild(bClient);
+    if (m.statut === "gagne" || m.statut === "perdu") {
+      var bBilan = h('<button class="btn ghost" title="Awa tire la leçon de cette affaire pour la mémoire de l’équipe">' + ic("lightbulb") + "Tirer la leçon</button>");
+      bBilan.addEventListener("click", function () { if (ADM.tirerLecon) ADM.tirerLecon("message", m._id, this); });
+      acts.appendChild(bBilan);
+    }
     acts.appendChild(h('<span style="flex:1"></span>'));
     var bLu = h('<button class="icobtn" title="Marquer comme non lue" aria-label="Marquer comme non lue">' + ic("envelope-simple-open") + "</button>");
     bLu.addEventListener("click", function () {
@@ -1072,10 +1135,12 @@
         g.appendChild(alerte);
         panel.appendChild(g);
         if (google) panel.appendChild(sectionGoogle(google));
+        // Sections ajoutées par admin-outils.js : brief du matin, notifications, sécurité, sauvegarde
+        (ADM.sectionsReglages || []).forEach(function (f) { try { panel.appendChild(f()); } catch (e) { console.error(e); } });
 
         if (ia) {
           var eq = h('<section class="sec"><div class="sec-h"><h3>' + ic("users-three") + 'Équipe IA</h3><small>' + esc(ADM.nombre(ia.limiteJetons)) + " tokens par jour et par assistante, au maximum</small></div><div class=\"sec-b flush\"></div></section>");
-          var vars = { diagnostic: "OPENAI_API_KEY", prospection: "ANTHROPIC_API_KEY", agenda: "OPENAI_API_KEY" };
+          var vars = { diagnostic: "OPENAI_API_KEY", prospection: "ANTHROPIC_API_KEY", contenu: "OPENAI_API_KEY", agenda: "OPENAI_API_KEY" };
           Object.keys(ADM.EQUIPE).forEach(function (k) {
             var a = ia.agents[k];
             var st = ADM.statutAgent(a);

@@ -57,6 +57,7 @@ router.post("/rdv/reserver", async (req, res) => {
     await notifier(`Nouveau rendez-vous : ${nom}, ${ag.libelleDate(d)}`,
       `${nom} (${email}${tel ? ", " + tel : ""}) a réservé un appel découverte le ${ag.libelleDate(d)} (${cfg.dureeAppel} min).` +
       (b.objet ? `\n\nSon projet : ${b.objet}` : "") + "\n\nPensez à confirmer le rendez-vous dans l'onglet Agenda.");
+    await require("../push").envoyer({ titre: "Rendez-vous réservé : " + nom, corps: ag.libelleDate(d) + " · à confirmer", lien: "agenda/rdv/" + rdv._id, type: "rdv" });
     res.status(201).json({ ok: true, id: rdv._id, quand: ag.libelleDate(d), dureeMin: cfg.dureeAppel, lieu: cfg.lieuAppel, debut: d.toISOString() });
   } catch (e) {
     console.error(e);

@@ -1283,6 +1283,27 @@
   /* ---------------------------------------------------------------------
      Démarrage
   --------------------------------------------------------------------- */
+  /* Référencement : titre et description réglés dans l'admin (Google lit la page affichée),
+     coordonnées des données structurées alignées sur le profil. */
+  function appliquerSeo(s, p) {
+    try {
+      s = s || {};
+      if (s.titre) document.title = s.titre;
+      var md = $('meta[name="description"]');
+      if (md && s.description) md.setAttribute("content", s.description);
+      var ld = $('script[type="application/ld+json"]');
+      if (!ld) return;
+      var j = JSON.parse(ld.textContent);
+      var tel = /^\+/.test(p.telephone || "") ? p.telephone : p.whatsapp || p.telephone;
+      if (tel) j.telephone = tel;
+      if (p.email) j.email = p.email;
+      if (s.description) j.description = s.description;
+      var liens = (p.reseaux || []).map(function (r) { return r && r.url; }).filter(function (u) { return /^https:\/\//.test(u || ""); });
+      if (liens.length) j.sameAs = liens;
+      ld.textContent = JSON.stringify(j);
+    } catch (e) { /* le HTML d'origine reste en place */ }
+  }
+
   function render(d) {
     D = d || {}; P = D.profile || {}; A = D.apropos || {};
     try { if (!sessionStorage.getItem("pa_vu")) { sessionStorage.setItem("pa_vu", "1"); trackVisite(); } } catch (e) { trackVisite(); }
@@ -1297,6 +1318,7 @@
       mono.textContent = "";
     });
     if (root.dataset.theme === "dark") { var m = $('meta[name="theme-color"]'); if (m) m.content = "#000000"; }
+    appliquerSeo(D.seo, P);
     $$(".js-handle").forEach(function (n) { n.textContent = user(); });
     $$(".js-name").forEach(function (n) { n.textContent = P.nom || ""; });
     $$(".js-dispo").forEach(function (n) { n.textContent = P.disponibilite || "Active maintenant"; });

@@ -11,6 +11,7 @@ const auth = require("./routes/auth");
 const { contentRouter, COLLECTIONS } = require("./routes/content");
 const messages = require("./routes/messages");
 const media = require("./routes/media");
+const seo = require("./routes/seo");
 const { col } = require("./store");
 
 /** Construit l'app Express (partagé entre le serveur classique et Vercel serverless). */
@@ -48,6 +49,8 @@ async function createApp() {
     }
     out.profile = (await col("settings").findOne({ key: "profile" })) || {};
     out.apropos = (await col("settings").findOne({ key: "apropos" })) || {};
+    // Titre et description réglés dans Référencement (appliqués par la page)
+    try { out.seo = await seo.publics(); } catch (e) { out.seo = null; }
     res.json(out);
   });
 
@@ -58,6 +61,14 @@ async function createApp() {
   app.use("/api/crm", require("./routes/crm").router);
   app.use("/api/crm", require("./routes/equipe").router);
   app.use("/api/crm", require("./routes/audience").router);
+  app.use("/api/crm", require("./routes/clients").router);
+  app.use("/api/crm", require("./routes/travail").router);
+  app.use("/api/crm", require("./routes/organisation").router);
+  app.use("/api/crm", require("./routes/brief").router);
+  app.use("/api/crm", require("./routes/compte").router);
+  app.use("/api/crm", seo.router);
+  app.use("/api/cron", require("./routes/brief").cron);
+  app.use("/api/liens", require("./routes/liens").router);
   app.use("/api", require("./routes/public").router);
 
   // Favicon et icône d'écran d'accueil : le logo choisi par Paule dans
@@ -72,11 +83,40 @@ async function createApp() {
     const p = (await col("settings").findOne({ key: "profile" })) || {};
     const source = String(p.favicon || p.logo || "").trim();
     const apple = req.query.type === "apple";
-    let cible = "/media/favicon.svg";
+    // iOS ne lit pas les icônes SVG : l'icône d'écran d'accueil par défaut est un PNG
+    let cible = apple ? "/media/app-180.png" : "/media/favicon.svg";
     if (/^(\/|https:\/\/)/.test(source)) cible = iconeCloudinary(source, apple ? 180 : 64, apple ? "white" : "") || source;
     res.set("Cache-Control", "public, max-age=300");
     res.redirect(302, cible);
   });
+
+  // Espace pro installable (écran d'accueil du téléphone, application sur l'ordinateur)
+  app.get("/api/manifest-admin", async (_req, res) => {
+    let source = "";
+    try {
+      const p = (await col("settings").findOne({ key: "profile" })) || {};
+      source = String(p.favicon || p.logo || "").trim();
+    } catch (e) { /* icônes par défaut */ }
+    const perso = [iconeCloudinary(source, 192, "white"), iconeCloudinary(source, 512, "white")];
+    const icons = perso[0] && perso[1]
+      ? [{ src: perso[0], sizes: "192x192", type: "image/png", purpose: "any" }, { src: perso[1], sizes: "512x512", type: "image/png", purpose: "any" }]
+      : [{ src: "/media/app-192.png", sizes: "192x192", type: "image/png", purpose: "any" }, { src: "/media/app-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/media/app-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }];
+    res.set("Cache-Control", "public, max-age=3600");
+    res.type("application/manifest+json").send(JSON.stringify({
+      id: "/admin", name: "Espace pro · Paule Ackerman", short_name: "Espace pro", lang: "fr", dir: "ltr",
+      description: "Messages, clients, équipe IA, calendrier, agenda et finances",
+      start_url: "/admin", scope: "/admin", display: "standalone", background_color: "#0B0E15", theme_color: "#0B0E15",
+      icons,
+      shortcuts: [
+        { name: "Messages", url: "/admin#messages" }, { name: "Équipe IA", url: "/admin#equipe" },
+        { name: "Calendrier", url: "/admin#calendrier" }, { name: "Agenda", url: "/admin#agenda" },
+      ],
+    }));
+  });
+
+  // Validation de Google Search Console (méthode « fichier HTML », réglée dans Référencement)
+  app.get(/^\/google[0-9a-z]{6,64}\.html$/i, seo.fichierVerification);
 
   // Diagnostic : permet de vérifier après un déploiement que la base et
   // Cloudinary sont bien branchés, sans avoir à se connecter à l'admin.
@@ -96,6 +136,8 @@ async function createApp() {
       if (p.includes(`${path.sep}media${path.sep}`)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     }}));
     app.get("/admin", (_req, res) => res.sendFile(path.join(CLIENT_DIR, "admin.html")));
+    // Pages des clients (validation, brief, avis, devis, rapport) : même fichier, le jeton est lu dans l'adresse
+    app.get("/lien/:jeton", (_req, res) => res.sendFile(path.join(CLIENT_DIR, "lien.html")));
     app.get("*", (req, res, next) => {
       if (req.path.startsWith("/api/")) return next();
       res.sendFile(path.join(CLIENT_DIR, "index.html"));

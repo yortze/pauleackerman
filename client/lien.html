@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#ffffff">
+<title>Paule Ackerman</title>
+<link rel="icon" href="/api/favicon">
+<link rel="apple-touch-icon" href="/api/favicon?type=apple">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..800;1,400..600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#F3F4F7;--surface:#fff;--surface-2:#F5F6F9;--line:rgba(14,17,22,.1);--line-2:rgba(14,17,22,.16);
+  --ink:#0E1116;--ink-2:#5A6173;--ink-3:#8B91A1;--accent:#2D6AE0;--accent-h:#2459c4;--accent-soft:rgba(45,106,224,.1);
+  --ok:#1A8D4B;--ok-soft:rgba(31,168,106,.12);--warn:#B87900;--warn-soft:rgba(237,161,0,.14);--bad:#D03B3B;--bad-soft:rgba(208,59,59,.1);--wa:#1A8D4B;
+  --r:16px;--ui:'Schibsted Grotesk',system-ui,-apple-system,"Segoe UI",sans-serif;--serif:'Instrument Serif',Georgia,serif;
+  --shadow:0 1px 2px rgba(14,17,22,.05),0 10px 30px rgba(14,17,22,.06);
+}
+@media (prefers-color-scheme:dark){:root{
+  color-scheme:dark;--bg:#0B0E15;--surface:#141924;--surface-2:#191F2C;--line:rgba(232,234,242,.09);--line-2:rgba(232,234,242,.16);
+  --ink:#E8EAF2;--ink-2:#A3ABC0;--ink-3:#6E7588;--accent:#4D86F2;--accent-h:#6E9BF5;--accent-soft:rgba(77,134,242,.16);
+  --ok:#2FBF7C;--ok-soft:rgba(47,191,124,.14);--warn:#E0A43B;--warn-soft:rgba(224,164,59,.16);--bad:#F0605D;--bad-soft:rgba(240,96,93,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.35);
+}}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--ui);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:var(--accent)}
+img,video{display:block;max-width:100%}
+[hidden]{display:none!important}
+.ph-duotone{line-height:1;flex:0 0 auto}
+input,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--line-2);border-radius:12px;padding:11px 13px;width:100%;outline:none}
+input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{resize:vertical;min-height:90px;line-height:1.55}
+label{display:block;font-size:13.5px;font-weight:600;margin:18px 0 7px}
+.haut{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;padding:12px 18px;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.marque{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.marque .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#141A2A,#2D6AE0) center/cover;flex:0 0 auto}
+.marque b{display:block;font-size:14.5px}.marque small{display:block;font-size:12px;color:var(--ink-3)}
+main{max-width:760px;margin:0 auto;padding:26px 18px 60px}
+h1{font-family:var(--serif);font-weight:400;font-style:italic;font-size:34px;line-height:1.15;letter-spacing:-.01em}
+.sous{color:var(--ink-2);margin-top:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:12px;font-weight:600;font-size:14.5px;background:var(--surface);border:1px solid var(--line-2);color:var(--ink);text-decoration:none;white-space:nowrap}
+.btn .ph-duotone{font-size:19px}
+.btn.primary{background:var(--accent);border-color:transparent;color:#fff}
+.btn.primary:hover{background:var(--accent-h)}
+.btn.ok{background:var(--ok);border-color:transparent;color:#fff}
+.btn.wa{background:var(--wa);border-color:transparent;color:#fff;height:36px;padding:0 12px;font-size:13px}
+.btn.sm{height:36px;padding:0 12px;font-size:13.5px}
+.btn:disabled{opacity:.55;cursor:default}
+.carte{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-top:18px;overflow:hidden}
+.carte-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink-2)}
+.carte-h .ph-duotone{font-size:22px;color:var(--accent)}
+.carte-h b{color:var(--ink)}
+.carte-b{padding:16px}
+.visuels{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;background:#0E1116}
+.visuels>*{flex:0 0 100%;scroll-snap-align:center;max-height:560px;object-fit:contain;margin:0 auto;width:100%}
+.visuels.plusieurs>*{flex-basis:88%}
+.legende{white-space:pre-wrap;word-break:break-word;font-size:14.5px}
+.sujet{font-weight:700;font-size:16px;margin-bottom:6px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--line);background:var(--surface-2)}
+.actions .btn{flex:1;min-width:160px}
+.etat{display:flex;align-items:center;gap:8px;padding:12px 16px;font-weight:600;font-size:14px;border-top:1px solid var(--line)}
+.etat.ok{background:var(--ok-soft);color:var(--ok)}.etat.modif{background:var(--warn-soft);color:var(--warn)}
+.com{background:var(--surface-2);border-radius:12px;padding:9px 12px;margin-top:8px;font-size:13.5px}
+.com b{font-size:12px;color:var(--ink-3)}
+.com p{white-space:pre-wrap}
+.vide{text-align:center;color:var(--ink-2);padding:40px 16px}
+.vide .ph-duotone{font-size:40px;color:var(--ink-3);display:block;margin:0 auto 10px}
+.note{font-size:13px;color:var(--ink-3);margin-top:8px}
+.etoiles{display:flex;gap:6px}
+.etoiles button{font-size:30px;color:var(--line-2);line-height:1}
+.etoiles button.on{color:#E8A317}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:14px;margin-top:18px}
+.check input{width:20px;height:20px;margin-top:2px;flex:0 0 auto;accent-color:var(--accent)}
+.merci{text-align:center;padding:40px 16px}
+.merci .ph-duotone{font-size:52px;color:var(--ok);display:block;margin:0 auto 12px}
+.erreur{color:var(--bad);font-size:14px;margin-top:10px;min-height:20px}
+.pot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.bandeau{display:flex;align-items:center;gap:10px;border-radius:12px;padding:12px 14px;margin-top:16px;font-weight:600;font-size:14px}
+.bandeau.ok{background:var(--ok-soft);color:var(--ok)}.bandeau.ko{background:var(--bad-soft);color:var(--bad)}.bandeau.info{background:var(--accent-soft);color:var(--accent)}
+/* --- Document (devis, facture, rapport) --- */
+.feuille{background:#fff;color:#14171E;border-radius:6px;box-shadow:var(--shadow);padding:40px 44px;margin-top:18px;font-size:13.5px}
+.feuille .ent{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.feuille .em b{font-size:16px}
+.feuille .em p,.feuille .cli p{color:#4b5263;font-size:12.5px;line-height:1.5}
+.feuille .logo{width:64px;height:64px;object-fit:contain;margin-bottom:8px}
+.feuille h2{font-family:var(--serif);font-style:italic;font-weight:400;font-size:38px;line-height:1;text-align:right}
+.feuille .num{text-align:right;color:#4b5263;font-size:12.5px;margin-top:6px}
+.feuille .cli{margin-top:26px;padding:14px 16px;background:#F5F6F9;border-radius:8px;max-width:340px}
+.feuille .cli small{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8B91A1;font-weight:600}
+.feuille .objet{margin-top:22px;font-weight:700;font-size:15px}
+.feuille table{width:100%;border-collapse:collapse;margin-top:14px}
+.feuille th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:#8B91A1;padding:9px 8px;border-bottom:2px solid #14171E}
+.feuille td{padding:11px 8px;border-bottom:1px solid #E3E5EA;vertical-align:top}
+.feuille td.n,.feuille th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.feuille td.d{white-space:pre-wrap}
+.feuille .tot{margin:16px 0 0 auto;max-width:300px}
+.feuille .tot div{display:flex;justify-content:space-between;padding:4px 8px;font-variant-numeric:tabular-nums}
+.feuille .tot .fort{font-weight:800;font-size:16px;border-top:2px solid #14171E;margin-top:4px;padding-top:8px}
+.feuille .bas{margin-top:26px;font-size:12px;color:#4b5263;white-space:pre-wrap;border-top:1px solid #E3E5EA;padding-top:14px}
+.feuille .chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:20px}
+.feuille .chiffre{border:1px solid #E3E5EA;border-radius:10px;padding:12px 14px}
+.feuille .chiffre span{font-size:12px;color:#4b5263}
+.feuille .chiffre b{display:block;font-size:22px;letter-spacing:-.02em}
+.feuille .chiffre small{font-size:12px;color:#1A8D4B;font-weight:600}
+.feuille h3{font-size:15px;margin-top:22px}
+.feuille ul{margin:6px 0 0 18px}
+.feuille li{margin:3px 0}
+.outils{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.accepter{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-top:16px}
+footer{text-align:center;color:var(--ink-3);font-size:12.5px;padding:0 18px 40px}
+@media (max-width:640px){
+  h1{font-size:28px}
+  .feuille{padding:24px 18px}
+  .feuille h2{font-size:30px;text-align:left}.feuille .num{text-align:left}
+  .feuille .ent{flex-direction:column}
+}
+@media print{
+  @page{margin:14mm}
+  body{background:#fff}
+  .haut,footer,.outils,.accepter,.bandeau,.sans-impression{display:none!important}
+  main{max-width:none;padding:0}
+  .feuille{box-shadow:none;padding:0;margin:0;border-radius:0}
+}
+</style>
+</head>
+<body>
+<header class="haut">
+  <div class="marque"><span class="av" id="pAv"></span><div><b id="pNom">Paule Ackerman</b><small id="pTitre">Social media manager</small></div></div>
+  <a class="btn wa" id="pWa" hidden target="_blank" rel="noopener"><i class="ph-duotone ph-whatsapp-logo" aria-hidden="true"></i>Écrire à Paule</a>
+</header>
+<main id="app"><div class="vide"><i class="ph-duotone ph-hourglass" aria-hidden="true"></i>Chargement…</div></main>
+<footer>Page privée préparée par Paule Ackerman. Ce lien vous est personnel : ne le partagez pas.</footer>
+<script src="/lien.js?v=2026-11-20a"></script>
+</body>
+</html>

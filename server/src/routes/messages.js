@@ -128,6 +128,8 @@ router.post("/", async (req, res) => {
       `${doc.nom} (${doc.email}${doc.telephone ? ", " + doc.telephone : ""}) vous a écrit depuis le site.\n` +
       (doc.besoin ? `\nBesoin : ${doc.besoin}` : "") + (doc.budget ? `\nBudget : ${doc.budget}` : "") + (doc.delai ? `\nDélai : ${doc.delai}` : "") +
       `\n\n${doc.message}`);
+    // Notification sur le téléphone de Paule (si elle les a activées)
+    await require("../push").envoyer({ titre: "Nouvelle demande : " + doc.nom, corps: doc.besoin || String(doc.message || "").slice(0, 160), lien: "messages/" + doc._id, type: "demande" });
   }
   res.status(201).json({ ok: true, id: doc._id });
 });

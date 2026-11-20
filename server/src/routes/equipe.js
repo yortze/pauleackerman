@@ -51,6 +51,8 @@ async function destination(pour) {
   if (a && Object.prototype.hasOwnProperty.call(agents.EQUIPE, a[1])) return s;
   const d = /^debrief:([\w-]{1,64})$/.exec(s);
   if (d && (await col("debriefs").get(d[1]))) return s;
+  const r = /^rapport:([\w-]{1,64})$/.exec(s);
+  if (r && (await col("rapports").get(r[1]))) return s;
   const e = new Error("Discussion inconnue");
   e.status = 400;
   throw e;
@@ -155,6 +157,14 @@ router.get("/recherche", enveloppe(async (req, res) => {
     const m = (d.messages || []).slice().reverse().find((x) => contient(x.texte));
     if (m) out.push({ type: "equipe", id: d.agent, titre: fiche.prenom + " · " + fiche.poste, sous: court(m.texte, 90), date: m.date });
   });
+
+  const clients = await col("clients").all();
+  clients.filter((c) => contient(c.nom, c.entreprise, c.contact, c.email, c.telephone, c.secteur, c.notes)).slice(0, 6)
+    .forEach((c) => out.unshift({ type: "client", id: String(c._id), titre: c.nom, sous: [c.formule, c.secteur, c.statut === "termine" ? "terminé" : ""].filter(Boolean).join(" · "), date: c.createdAt }));
+  (await col("documents").all()).filter((d) => contient(d.numero, d.objet, d.clientNom)).slice(0, 6)
+    .forEach((d) => out.push({ type: "document", id: String(d._id), titre: (d.numero || "Brouillon") + " · " + (d.clientNom || ""), sous: (d.type === "devis" ? "Devis" : "Facture") + " · " + court(d.objet, 60), date: d.createdAt }));
+  (await col("planning").all()).filter((p) => contient(p.sujet, p.legende)).slice(0, 5)
+    .forEach((p) => out.push({ type: "planning", id: String(p._id), titre: court(p.sujet || p.legende, 70), sous: p.reseau + " · " + p.date, date: p.date }));
   res.json({ resultats: out });
 }));
 
@@ -190,6 +200,11 @@ router.get("/activite", enveloppe(async (_req, res) => {
       sous: r.ok ? court(r.detail, 70) : "", echec: !r.ok,
     });
   });
+  // Événements venus des liens clients (avis, brief, validations, devis acceptés…)
+  (await col("evenements").all()).slice(-30).forEach((e) => ev.push({
+    type: e.type, id: "", lien: e.lien || "", date: e.createdAt, icone: e.icone || "bell", texte: e.texte, sous: e.sous || "",
+    nonLu: e.type === "avis" || e.type === "brief" || e.type === "devis",
+  }));
   ev.sort((a, b) => String(b.date).localeCompare(String(a.date)));
   res.json({ evenements: ev.slice(0, 40) });
 }));

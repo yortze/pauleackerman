@@ -15,12 +15,17 @@
     lister_relances: "a consulté les relances", programmer_relance: "a programmé une relance", changer_statut: "a changé une étape",
     lister_prospects: "a consulté vos prospects", enregistrer_prospects: "a ajouté des prospects", mettre_a_jour_prospect: "a mis à jour un prospect",
     enregistrer_audit: "a enregistré un audit", lister_notes: "a lu le bloc-notes", ajouter_note: "a noté une tâche", cocher_note: "a coché une tâche",
+    lister_clients: "a consulté vos clients", lire_client: "a lu une fiche client", preparer_document: "a préparé un brouillon de devis ou de facture",
+    etat_finances: "a consulté vos finances", lister_planning: "a consulté le calendrier", ajouter_publication: "a ajouté une publication au calendrier",
+    modifier_publication: "a modifié une publication", proposer_memoire: "propose de retenir quelque chose",
   };
-  var ECRITURES = ["analyser_demande", "mettre_a_jour_demande", "creer_rdv", "modifier_rdv", "programmer_relance", "changer_statut", "enregistrer_prospects", "mettre_a_jour_prospect", "enregistrer_audit", "ajouter_note", "cocher_note"];
+  var ECRITURES = ["analyser_demande", "mettre_a_jour_demande", "creer_rdv", "modifier_rdv", "programmer_relance", "changer_statut", "enregistrer_prospects", "mettre_a_jour_prospect", "enregistrer_audit", "ajouter_note", "cocher_note",
+    "preparer_document", "ajouter_publication", "modifier_publication"];
   var LIB_CTX = { message: "Demande", prospect: "Prospect", rdv: "Rendez-vous" };
   var ATTENTE = {
     diagnostic: "Nadia lit vos demandes…",
     prospection: "Yann cherche sur le web… cela peut prendre une à deux minutes.",
+    contenu: "Léa écrit…",
     agenda: "Awa réfléchit…",
   };
 
@@ -29,11 +34,14 @@
     ADM.aller("equipe/" + agent);
   };
 
-  var PRENOMS = { diagnostic: "Nadia", prospection: "Yann", agenda: "Awa" };
-  var ORDRE = ["diagnostic", "prospection", "agenda"];
+  var PRENOMS = { diagnostic: "Nadia", prospection: "Yann", contenu: "Léa", agenda: "Awa" };
+  var ORDRE = ["diagnostic", "prospection", "contenu", "agenda"];
+  var ALIAS = { contenu: ["Léa", "Lea"] };
   /** Assistantes citées avec @Prénom dans un message de débrief (toutes si aucune). */
   function citees(texte) {
-    var l = ORDRE.filter(function (k) { return new RegExp("@" + PRENOMS[k] + "(?![A-Za-zÀ-ÿ0-9])", "i").test(texte); });
+    var l = ORDRE.filter(function (k) {
+      return (ALIAS[k] || [PRENOMS[k]]).some(function (p) { return new RegExp("@" + p + "(?![A-Za-zÀ-ÿ0-9])", "i").test(texte); });
+    });
     return l.length ? l : ORDRE.slice();
   }
   function listePrenoms(l) {
@@ -63,7 +71,7 @@
     plein: true,
     rendu: function (params, panel) {
       panel.innerHTML = '<div class="chat"><div class="chat-l"><div class="chat-l-h"><b>Votre équipe</b>' +
-        "<p>Trois assistantes IA qui travaillent pour vous, jour et nuit.</p></div>" +
+        "<p>Quatre assistantes IA qui travaillent pour vous, jour et nuit, et apprennent de vos retours.</p></div>" +
         '<div class="chat-l-b"><div class="contacts" data-l="agents"></div>' +
         '<div class="chat-l-sec"><span>Débriefs d’équipe</span><button class="icobtn" data-a="nouveau" title="Nouveau débrief" aria-label="Nouveau débrief">' + ic("plus") + "</button></div>" +
         '<div class="contacts" data-l="debriefs"></div>' +
@@ -104,7 +112,23 @@
         if (!cle) { droite.innerHTML = ""; return; }
         if (cle.indexOf("debrief:") === 0) ouvrirDebrief(cle.slice(8));
         else if (cle === "notes") ouvrirNotes();
+        else if (cle === "memoire" || cle === "raccourcis") ouvrirOutil(cle);
         else ouvrir(cle);
+      }
+      /* Mémoire de l'équipe et raccourcis : panneaux d'admin-outils.js */
+      function ouvrirOutil(cle) {
+        marquer(cle, cle);
+        var titre = cle === "memoire" ? ["brain", "Mémoire de l’équipe", "Ce que vos assistantes ont appris de vous"] : ["lightning", "Raccourcis", "Vos demandes toutes prêtes pour l’équipe"];
+        var tete = h('<div class="chat-h"><button class="icobtn retour-m" aria-label="Retour">' + ic("arrow-left") + "</button>" + avIcone(titre[0]) +
+          '<div class="grow"><b></b><small></small></div></div>');
+        $(".grow b", tete).textContent = titre[1];
+        $(".grow small", tete).textContent = titre[2];
+        boutonRetour(tete);
+        droite.appendChild(tete);
+        var fil = h('<div class="fil"><div class="fil-in notes"></div></div>');
+        droite.appendChild(fil);
+        var rafraichir = function () { api("/api/crm/dashboard").then(function (dd) { ADM.etat.dash = dd; dessinerListe(); }).catch(function () {}); };
+        if (cle === "memoire") ADM.panneauMemoire($(".fil-in", fil), rafraichir); else ADM.panneauRaccourcis($(".fil-in", fil));
       }
       function ligneContact(cle, avatar, titre, quand, poste, apercu) {
         var c = h('<div class="contact' + (cle === actif ? " on" : "") + '" tabindex="0" data-cle="' + esc(cle) + '">' + avatar +
@@ -132,7 +156,7 @@
         }
         debriefs.forEach(function (d) {
           var der = d.dernier;
-          var apercu = der ? (der.role === "user" ? "Vous : " : (PRENOMS[der.agent] || "") + " : ") + ADM.pieces.resume(der) : "Nadia, Yann et Awa";
+          var apercu = der ? (der.role === "user" ? "Vous : " : (PRENOMS[der.agent] || "") + " : ") + ADM.pieces.resume(der) : "Nadia, Yann, Léa et Awa";
           lDebriefs.appendChild(ligneContact("debrief:" + d.id, avGroupe("lg"), d.titre, der ? ADM.dateRel(der.date) : ADM.dateRel(d.creeLe),
             d.contexte ? d.contexte.label : "Sujet libre", apercu));
         });
@@ -140,6 +164,10 @@
         var aFaire = notes.filter(function (n) { return !n.fait; }).length;
         lOutils.appendChild(ligneContact("notes", avIcone("note-pencil", "lg"), "Bloc-notes", "", "Vos tâches et celles notées par Awa",
           aFaire ? aFaire + " tâche" + (aFaire > 1 ? "s" : "") + " à faire" : "Rien à faire pour l’instant"));
+        var aValider = ((ADM.etat.dash || {}).travail || {}).memoireAValider || 0;
+        lOutils.appendChild(ligneContact("memoire", avIcone("brain", "lg"), "Mémoire de l’équipe", "", "Ce que vos assistantes retiennent de vous",
+          aValider ? aValider + " proposition" + (aValider > 1 ? "s" : "") + " à valider" : "Vos préférences, vos règles, leurs leçons"));
+        lOutils.appendChild(ligneContact("raccourcis", avIcone("lightning", "lg"), "Raccourcis", "", "Vos demandes toutes prêtes", "Un clic pour demander à l’équipe"));
       }
       function marquer(cle, hash) {
         actif = cle;
@@ -180,6 +208,21 @@
           ajuster();
         }
         pj = ADM.pieces.brancher({ ligne: $(".compose-row", compo), zone: $(".pj-zone", compo), champ: zone, pour: pour, change: ajuster });
+        // Raccourcis (demandes toutes prêtes) et dictée vocale
+        var agentSaisie = String(pour || "").indexOf("agent:") === 0 ? pour.slice(6) : "tous";
+        var bRacc = h('<button type="button" class="joindre" title="Raccourcis : vos demandes toutes prêtes" aria-label="Raccourcis">' + ic("lightning") + "</button>");
+        zone.parentNode.insertBefore(bRacc, zone);
+        bRacc.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (ADM.menuRaccourcis) ADM.menuRaccourcis(bRacc, agentSaisie, function (t) {
+            zone.value = zone.value.trim() ? zone.value.replace(/\s*$/, " ") + t : t;
+            ajuster(); zone.focus();
+            var i = zone.value.indexOf("["), j = zone.value.indexOf("]", i);
+            if (i !== -1 && j !== -1) zone.setSelectionRange(i, j + 1);
+          });
+        });
+        var bMicro = ADM.dictee ? ADM.dictee(zone, ajuster) : null;
+        if (bMicro) zone.parentNode.insertBefore(bMicro, bouton);
         zone.addEventListener("input", ajuster);
         zone.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); surEnvoi(); } });
         bouton.addEventListener("click", function () { surEnvoi(); });
@@ -196,15 +239,74 @@
         if (!garderBulle) b.remove();
       }
       function pastillesActions(filIn, prenom, actions) {
-        var faits = (actions || []).filter(function (x, i, t) { return t.findIndex(function (y) { return y.outil === x.outil && y.ok === x.ok; }) === i; });
-        if (!faits.length) return;
-        var f = h('<div class="faits"></div>');
-        faits.forEach(function (x) {
-          var ecrit = ECRITURES.indexOf(x.outil) !== -1;
-          f.appendChild(h('<span class="pill ' + (!x.ok ? "ko" : ecrit ? "ok" : "") + '">' + ic(!x.ok ? "warning-circle" : ecrit ? "check-circle" : "eye") +
-            esc(prenom + " " + (ACTIONS[x.outil] || x.outil)) + "</span>"));
+        var faits = (actions || []).filter(function (x, i, t) { return x.outil !== "proposer_memoire" && t.findIndex(function (y) { return y.outil === x.outil && y.ok === x.ok; }) === i; });
+        if (faits.length) {
+          var f = h('<div class="faits"></div>');
+          faits.forEach(function (x) {
+            var ecrit = ECRITURES.indexOf(x.outil) !== -1;
+            f.appendChild(h('<span class="pill ' + (!x.ok ? "ko" : ecrit ? "ok" : "") + '">' + ic(!x.ok ? "warning-circle" : ecrit ? "check-circle" : "eye") +
+              esc(prenom + " " + (ACTIONS[x.outil] || x.outil)) + "</span>"));
+          });
+          filIn.appendChild(f);
+        }
+        // Propositions de mémoire : Paule garde ou écarte
+        (actions || []).filter(function (x) { return x.memoire && x.memoire.id; }).forEach(function (x) {
+          var b = h('<div class="memo-prop">' + ic("brain") + '<div class="grow"><small></small><p></p></div><div class="acts"><button class="btn sm primary">' + ic("check") +
+            'Retenir</button><button class="btn sm ghost">Non</button></div></div>');
+          $("small", b).textContent = prenom + " propose de retenir :";
+          $("p", b).textContent = "« " + x.memoire.texte + " »";
+          var bt = $$("button", b);
+          function fini(t) { $(".acts", b).innerHTML = ""; $(".acts", b).appendChild(h('<span class="pill ' + (t === "ok" ? "ok" : "") + '">' + (t === "ok" ? "retenu" : t === "non" ? "écarté" : "déjà traité") + "</span>")); }
+          bt[0].addEventListener("click", function () {
+            api("/api/crm/memoire/" + x.memoire.id, { method: "PUT", body: { statut: "active" } }).then(function () { fini("ok"); ADM.toast("C’est retenu : toute l’équipe s’en souviendra"); ADM.rafraichirCompteurs(); })
+              .catch(function () { fini("deja"); });
+          });
+          bt[1].addEventListener("click", function () {
+            api("/api/crm/memoire/" + x.memoire.id, { method: "DELETE" }).then(function () { fini("non"); ADM.rafraichirCompteurs(); }).catch(function () { fini("deja"); });
+          });
+          filIn.appendChild(b);
         });
-        filIn.appendChild(f);
+      }
+      /** Pouce levé / « à corriger » sous une réponse : la correction devient une leçon de la mémoire. */
+      function boutonsRetour(m, filIn, apres, envoyerRetour) {
+        var r = h('<span class="retour"><button class="icobtn" title="Bonne réponse" aria-label="Bonne réponse">' + ic("thumbs-up") +
+          '</button><button class="icobtn" title="À corriger : votre correction devient une leçon pour l’équipe" aria-label="À corriger">' + ic("thumbs-down") + "</button></span>");
+        var b = $$("button", r);
+        function etat(note) { b[0].classList.toggle("on", note === "bien"); b[1].classList.toggle("on", note === "corriger"); }
+        etat(m.retour && m.retour.note);
+        b[0].addEventListener("click", function () {
+          envoyerRetour("bien", "").then(function () { m.retour = { note: "bien" }; etat("bien"); ADM.toast("Merci pour le retour"); }).catch(function (e) { ADM.toast(e.message, "ko"); });
+        });
+        b[1].addEventListener("click", function () {
+          if (r.nextSibling && r.nextSibling.classList && r.nextSibling.classList.contains("corriger")) return;
+          var f = h('<div class="corriger"><input placeholder="Qu’est-ce qui ne va pas ? ex : « je tutoie toujours mes clients »"><button class="btn sm primary">Envoyer</button></div>');
+          apres.parentNode.insertBefore(f, apres.nextSibling);
+          $("input", f).focus();
+          function go() {
+            var t = $("input", f).value.trim();
+            if (!t) return;
+            envoyerRetour("corriger", t).then(function () {
+              m.retour = { note: "corriger", texte: t }; etat("corriger"); f.remove();
+              ADM.toast("Noté : toute l’équipe s’en souviendra");
+            }).catch(function (e) { ADM.toast(e.message, "ko"); });
+          }
+          $("button", f).addEventListener("click", go);
+          $("input", f).addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
+        });
+        return r;
+      }
+      /** Suites proposées par l'assistante sous sa dernière réponse. */
+      function afficherSuites(filIn, m, surChoix) {
+        $$(".suites", filIn).forEach(function (s) { s.remove(); });
+        if (!m || m.role !== "assistant" || !(m.suggestions || []).length) return;
+        var s = h('<div class="suites"></div>');
+        m.suggestions.forEach(function (t) {
+          var b = h('<button type="button">' + ic("arrow-bend-down-right") + "<span></span></button>");
+          $("span", b).textContent = t;
+          b.addEventListener("click", function () { surChoix(t); });
+          s.appendChild(b);
+        });
+        filIn.appendChild(s);
       }
       function aNote(actions) { return (actions || []).some(function (x) { return x.ok && (x.outil === "ajouter_note" || x.outil === "cocher_note"); }); }
 
@@ -290,14 +392,19 @@
           filIn.appendChild(r);
           var meta = h('<div class="msg-meta"></div>');
           meta.textContent = m.date ? ADM.dateRel(m.date) : "";
+          if (!moi && !m.erreur && m.date) meta.appendChild(boutonsRetour(m, filIn, meta, function (note, t) {
+            return api("/api/crm/equipe/" + agent + "/retour", { method: "POST", body: { date: m.date, note: note, texte: t } });
+          }));
           filIn.appendChild(meta);
           pastillesActions(filIn, a.prenom || "", m.actions);
         }
+        function suite(t) { zone.value = t; ajuster(); envoyer(); }
 
         api("/api/crm/equipe/" + agent).then(function (d) {
           filIn.innerHTML = "";
           intro();
           (d.messages || []).forEach(bulle);
+          afficherSuites(filIn, (d.messages || []).slice(-1)[0], suite);
           enBasDe(fil, true);
           if (attente && attente.envoyer) envoyer();
         }).catch(ADM.erreur(filIn));
@@ -318,6 +425,7 @@
         }
         function partir(texte, pieces) {
           var ctx = contexte;
+          afficherSuites(filIn, null);
           bulle({ role: "user", texte: texte, date: new Date().toISOString(), contexte: ctx, pieces: pieces });
           zone.value = ""; ajuster(); poserContexte(null); saisie.pj.vider();
           var ecrit = h('<div class="msg-r lui">' + ADM.avAgent(agent, "sm") + '<div class="bulle" style="padding:0"><div class="ecrit"><i></i><i></i><i></i></div></div></div>');
@@ -330,6 +438,7 @@
           } }).then(function (r) {
             ecrit.remove(); note.remove();
             bulle(r.message);
+            afficherSuites(filIn, r.message, suite);
             enBasDe(fil);
             a.dernier = r.message;
             dessinerListe();
@@ -355,7 +464,7 @@
       function nouveauDebrief() {
         var corps = h('<div><label style="margin-top:0">Sujet</label><input data-k="titre" maxlength="120" placeholder="Ex. : Préparer le devis de Folie Douce">' +
           '<label>Client concerné <span class="help">(facultatif)</span></label><select data-k="client"><option value="">Aucun, sujet libre</option></select>' +
-          '<p class="muted" style="font-size:12.5px;margin:4px 0 14px">Nadia et Yann donnent leur avis, puis Awa fait la synthèse : les grands points, et les tâches à faire qu’elle note dans votre bloc-notes.</p>' +
+          '<p class="muted" style="font-size:12.5px;margin:4px 0 14px">Nadia, Yann et Léa donnent leur avis, puis Awa fait la synthèse : les grands points, et les tâches à faire qu’elle note dans votre bloc-notes.</p>' +
           '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn ghost" data-a="annuler">Annuler</button><button class="btn primary" data-a="creer">' + ic("users-three") + "Réunir l’équipe</button></div></div>");
         var m = ADM.modale("Nouveau débrief", corps);
         var sel = $('[data-k="client"]', corps), titre = $('[data-k="titre"]', corps), clients = [];
@@ -404,7 +513,7 @@
           '<div class="grow"><b></b><small></small></div>' +
           '<button class="icobtn danger" data-a="suppr" title="Supprimer le débrief" aria-label="Supprimer le débrief">' + ic("trash") + "</button></div>");
         $(".grow b", tete).textContent = d.titre;
-        $(".grow small", tete).textContent = (d.contexte ? d.contexte.label + " · " : "") + "Nadia, Yann et Awa";
+        $(".grow small", tete).textContent = (d.contexte ? d.contexte.label + " · " : "") + "Nadia, Yann, Léa et Awa";
         boutonRetour(tete);
         $('[data-a="suppr"]', tete).addEventListener("click", function () {
           if (!confirm("Supprimer le débrief « " + d.titre + " » ? Les tâches notées dans le bloc-notes restent.")) return;
@@ -421,7 +530,7 @@
         var filIn = $(".fil-in", fil);
         droite.appendChild(fil);
         var saisie = zoneSaisie("Écrire à l’équipe…",
-          "Nadia et Yann répondent, puis Awa fait la synthèse. Vérifiez ce qu’elles préparent avant de l’envoyer à un client.", envoyer, "debrief:" + id);
+          "Nadia, Yann et Léa répondent, puis Awa fait la synthèse. Vérifiez ce qu’elles préparent avant de l’envoyer à un client.", envoyer, "debrief:" + id);
         droite.appendChild(saisie.el);
         var zone = saisie.zone, ajuster = saisie.ajuster;
         var cibles = h('<div class="cibles"></div>');
@@ -440,8 +549,8 @@
         function intro() {
           var p = h('<div class="presente">' + avGroupe("xl") + '<b></b><p></p><div class="meta"></div><div class="idees" style="margin-top:14px"></div></div>');
           $("b", p).textContent = d.titre;
-          $("p", p).textContent = "Posez votre question à toute l’équipe. Nadia et Yann donnent leur avis, puis Awa réagit et fait la synthèse : " +
-            "les grands points, et les tâches à faire qu’elle note dans votre bloc-notes. Écrivez @Nadia, @Yann ou @Awa pour ne parler qu’à une seule.";
+          $("p", p).textContent = "Posez votre question à toute l’équipe. Nadia, Yann et Léa donnent leur avis, puis Awa réagit et fait la synthèse : " +
+            "les grands points, et les tâches à faire qu’elle note dans votre bloc-notes. Écrivez @Nadia, @Yann, @Léa ou @Awa pour ne parler qu’à une seule.";
           if (d.contexte) $(".meta", p).appendChild(h('<span class="pill bleu">' + ic(d.contexte.type === "prospect" ? "target" : "chat-circle-text") + esc(d.contexte.label) + "</span>"));
           var idees = d.contexte
             ? ["Faisons le point sur ce client", "Quel prix proposer, et avec quelle marge ?", "Qu’attend ce client de moi ?"]
@@ -466,6 +575,9 @@
           filIn.appendChild(r);
           var meta = h('<div class="msg-meta"></div>');
           meta.textContent = m.date ? ADM.dateRel(m.date) : "";
+          if (!moi && !m.erreur && m.date) meta.appendChild(boutonsRetour(m, filIn, meta, function (note, t) {
+            return api("/api/crm/debriefs/" + id + "/retour", { method: "POST", body: { date: m.date, agent: m.agent, note: note, texte: t } });
+          }));
           filIn.appendChild(meta);
           if (!moi) pastillesActions(filIn, prenom, m.actions);
         }
@@ -596,9 +708,13 @@
         var acces = {
           diagnostic: ["Lire vos demandes reçues et leurs coordonnées", "Analyser une demande et enregistrer l’analyse", "Mettre à jour l’étape, la relance et vos notes"],
           prospection: ["Chercher et lire des pages web publiques", "Ajouter et mettre à jour des prospects", "Enregistrer des audits de présence en ligne"],
+          contenu: ["Lire les fiches de vos clients (ton, brief, notes)", "Écrire légendes, scripts et idées de publications", "Ajouter des publications au calendrier, à l’étape « idée »",
+            "Rédiger le bilan mensuel d’un client à partir de vos captures"],
           agenda: ["Consulter et créer des rendez-vous", "Déplacer, confirmer ou annuler un rendez-vous", "Programmer des relances et changer les étapes",
-            "Vous conseiller sur vos prix, vos marges et les attentes de vos clients", "Lire vos demandes reçues et vos prospects", "Noter et cocher des tâches dans le bloc-notes"],
+            "Vous conseiller sur vos prix, vos marges et les attentes de vos clients", "Lire vos demandes reçues, vos prospects, vos clients et vos finances",
+            "Préparer des brouillons de devis et de factures", "Noter et cocher des tâches dans le bloc-notes"],
         }[a.agent] || [];
+        acces.push("Proposer de retenir ce que vous lui apprenez (vous validez dans la mémoire de l’équipe)");
         var corps = h('<div><div class="presente" style="padding-top:18px">' + ADM.avAgent(a.agent, "xl", ADM.statutAgent(a).dispo) + "<b></b><p></p></div>" +
           '<section class="sec"><div class="sec-b">' +
           '<div class="ligne" style="padding:8px 0;border:none"><span class="grow muted">Fournisseur</span><b></b></div>' +
@@ -754,6 +870,8 @@
             '<label>Notes privées</label><textarea data-k="notes" rows="3"></textarea>' +
             '<div class="formfoot" style="margin-top:14px"><button class="btn primary" data-a="sauver">Enregistrer</button>' +
             '<button class="btn soft" data-a="yann">' + ADM.avAgent("prospection", "sm") + "Demander à Yann</button>" +
+            '<button class="btn" data-a="client">' + ic("address-book") + (p.clientId ? "Fiche client" : "Devenu client : créer sa fiche") + "</button>" +
+            (p.statut === "gagne" || p.statut === "ecarte" ? '<button class="btn ghost" data-a="lecon">' + ic("lightbulb") + "Tirer la leçon</button>" : "") +
             '<span style="flex:1"></span><button class="btn danger" data-a="suppr">' + ic("trash") + "Supprimer</button></div></div></section></div>");
           var q = $(".qualif", corps);
           [["Secteur", p.secteur], ["Ville", p.ville], ["Potentiel", p.potentiel], ["Source", p.source === "IA" ? "Trouvé par Yann" : "Ajouté à la main"]].forEach(function (x) {
@@ -847,6 +965,11 @@
           $('[data-a="yann"]', corps).addEventListener("click", function () {
             ADM.ouvrirEquipe("prospection", { contexte: { type: "prospect", id: p._id, label: "Prospect " + p.nom }, texte: "Que me conseilles-tu pour décrocher ce client ?" });
           });
+          $('[data-a="client"]', corps).addEventListener("click", function () {
+            if (p.clientId) ADM.aller("clients/" + p.clientId); else ADM.creerClientDepuis("prospect", p._id);
+          });
+          var bLecon = $('[data-a="lecon"]', corps);
+          if (bLecon) bLecon.addEventListener("click", function () { if (ADM.tirerLecon) ADM.tirerLecon("prospect", p._id, bLecon); });
           $('[data-a="suppr"]', corps).addEventListener("click", function () {
             if (!confirm("Supprimer « " + p.nom + " » de vos prospects ? Cette action est irréversible.")) return;
             api("/api/crm/prospects/" + p._id, { method: "DELETE" }).then(function () {

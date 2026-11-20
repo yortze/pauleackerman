@@ -7,6 +7,12 @@
 <meta name="theme-color" content="#ffffff">
 <title>Espace pro — Paule Ackerman</title>
 <link rel="icon" href="/api/favicon">
+<link rel="manifest" href="/api/manifest-admin">
+<link rel="apple-touch-icon" href="/media/app-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Espace pro">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..800;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -45,6 +51,7 @@ try { var t = localStorage.getItem("adm-theme"); if (t === "dark" || t === "ligh
   --g-nadia:linear-gradient(135deg,#2D6AE0,#7FA8F5);
   --g-yann:linear-gradient(135deg,#E2683A,#F2A65A);
   --g-awa:linear-gradient(135deg,#1A8D4B,#5CC98C);
+  --g-lea:linear-gradient(135deg,#8E3FC9,#D47BE8);
 }
 @media (prefers-color-scheme:dark){
   :root:where(:not([data-theme="light"])){
@@ -166,6 +173,9 @@ kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line-2);bord
 .login-card label{text-align:left}
 .login-card .btn{width:100%;margin-top:14px}
 .login .err{color:var(--bad);font-size:13px;min-height:18px;margin-top:8px;text-align:left}
+.login-card p.login-aide{font-size:12.5px;color:var(--ink-3);margin:8px 0 0;text-align:left;line-height:1.5}
+#code2fa{font-size:20px;letter-spacing:.18em;text-align:center;font-variant-numeric:tabular-nums}
+.login-retour{display:inline-block;margin-top:10px;font-size:12.5px;color:var(--ink-2);background:none;border:none;cursor:pointer}
 .login-site{display:inline-block;margin-top:16px;font-size:12.5px;color:var(--ink-3)}
 .login-site:hover{color:var(--ink)}
 
@@ -347,7 +357,7 @@ kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line-2);bord
 .hero-stat b{display:block;font-size:22px;font-weight:700;letter-spacing:-.02em}
 .hero-stat span{font-size:12px;color:var(--ink-3)}
 .hero-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:16px 16px 20px}
-.equipe-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.equipe-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
 .employe{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-1);text-align:left;transition:border-color .15s,transform .15s}
 .employe:hover{border-color:var(--accent-line);transform:translateY(-1px)}
 .employe .haut{display:flex;align-items:center;gap:12px}
@@ -465,6 +475,65 @@ button.tuile:hover{border-color:var(--accent-line)}
 .note .m{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.note .m:empty{display:none}
 .note.fait .t{text-decoration:line-through;color:var(--ink-3)}
 .note .icobtn{opacity:.6}.note:hover .icobtn{opacity:1}
+.note .acts{display:flex;gap:4px;align-items:center;flex:0 0 auto}
+.note .icobtn.on{opacity:1;color:var(--accent)}
+.note.mem.prop{border-style:dashed;border-color:var(--accent);background:var(--accent-soft)}
+/* Retours sur une réponse, corrections, suites proposées, propositions de mémoire */
+.retour{display:inline-flex;gap:2px;margin-left:6px;vertical-align:middle}
+.retour .icobtn{width:24px;height:24px;border-radius:7px;opacity:.5}
+.retour .icobtn .ph-duotone{font-size:14px}
+.msg-meta:hover .retour .icobtn,.retour .icobtn:focus-visible,.retour .icobtn.on{opacity:1}
+.retour .icobtn.on{color:var(--accent);background:var(--accent-soft)}
+.corriger{display:flex;gap:8px;margin:4px 0 0 46px;max-width:560px}
+.corriger input{flex:1;min-width:0;height:32px}
+.suites{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 0 46px}
+.suites button{display:inline-flex;align-items:center;gap:6px;max-width:100%;border:1px solid var(--line-2);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink-2);text-align:left;transition:border-color .15s,color .15s}
+.suites button:hover{border-color:var(--accent);color:var(--accent)}
+.suites button .ph-duotone{flex:0 0 auto;color:var(--accent)}
+.memo-prop{display:flex;align-items:center;gap:10px;margin:6px 0 0 46px;max-width:580px;padding:10px 12px;border:1px dashed var(--accent);border-radius:14px;background:var(--accent-soft)}
+.memo-prop>.ph-duotone{font-size:20px;color:var(--accent);flex:0 0 auto}
+.memo-prop .grow{flex:1;min-width:0}
+.memo-prop small{font-size:11.5px;color:var(--ink-3)}
+.memo-prop p{font-size:13.5px;margin-top:1px;word-break:break-word}
+.memo-prop .acts{display:flex;gap:6px;flex:0 0 auto}
+/* Référencement */
+.seo-tete{display:flex;align-items:center;gap:20px;padding:18px 20px;margin-bottom:16px}
+.seo-tete h3{font-size:16px;font-weight:700}
+.seo-tete p{font-size:13px;margin:4px 0 10px;line-height:1.5}
+.seo-tete .grow{flex:1;min-width:0}
+.seo-score{display:flex;align-items:baseline;gap:4px;flex:0 0 auto}
+.seo-score b{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.seo-score span{font-size:14px;color:var(--ink-3)}
+.meter{height:8px;border-radius:999px;background:var(--surface-3);overflow:hidden;max-width:420px}
+.meter i{display:block;height:100%;border-radius:999px;background:var(--accent);transition:width .4s ease}
+.seo-g{align-items:start;margin-bottom:16px}
+.seo-gr{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding:14px 18px 4px}
+.seo-pt{align-items:flex-start}
+.seo-pt .ico-rond{width:30px;height:30px;background:var(--warn-soft);color:var(--warn)}
+.seo-pt.ok .ico-rond{background:var(--ok-soft);color:var(--ok)}
+.seo-pt small{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:2px}
+.seo-pt .btn{flex:0 0 auto}
+.serp{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:6px;background:var(--surface)}
+.serp-site{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.serp-site img{width:26px;height:26px;border-radius:50%;background:var(--surface-3);padding:3px;object-fit:contain}
+.serp-site b{display:block;font-size:13px;font-weight:600}
+.serp-site small{display:block;font-size:12px;color:var(--ink-3)}
+.serp-t{font-size:19px;line-height:1.3;color:var(--accent);margin-bottom:3px;word-break:break-word}
+.serp-d{font-size:13.5px;line-height:1.55;color:var(--ink-2);word-break:break-word}
+.compteur.trop{color:var(--warn)}
+/* Notifications et application */
+.notif-bloc{padding:12px 0;border-top:1px solid var(--line)}
+.notif-bloc:first-child{border-top:none;padding-top:0}
+.notif-bloc>b{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.notif-bloc>b .ph-duotone{font-size:17px;color:var(--accent)}
+.notif-bloc>p{font-size:13px;line-height:1.6;margin:6px 0 0}
+.notif-bloc .check{margin-top:8px}
+/* Double authentification */
+.etapes-2fa{margin:12px 0 4px 18px;font-size:13px;line-height:1.7;color:var(--ink-2)}
+.codes-secours{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.codes-secours span{padding:9px 10px;border:1px dashed var(--line-2);border-radius:10px;text-align:center;font-size:15px;letter-spacing:.06em;background:var(--surface-2)}
+.compose .joindre.micro.on{background:var(--bad-soft);color:var(--bad);animation:ecoute 1.4s ease-in-out infinite}
+@keyframes ecoute{0%,100%{opacity:1}50%{opacity:.55}}
 .chat-r{display:flex;flex-direction:column;min-height:0;background:var(--bg)}
 .chat-h{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
 .chat-h .grow{flex:1;min-width:0}
@@ -647,11 +716,88 @@ button.tuile:hover{border-color:var(--accent-line)}
 .sb-logo.img{background:#fff center/contain no-repeat;color:transparent;border:1px solid var(--line)}
 
 /* =====================================================================
+   Clients, devis et factures
+===================================================================== */
+tr.cliquable{cursor:pointer}tr.cliquable:hover td{background:var(--hover)}
+.cl-grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.cl-carte{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow-1);transition:border-color .15s,transform .15s}
+.cl-carte:hover{border-color:var(--accent-line);transform:translateY(-1px)}
+.cl-carte .grow{flex:1;min-width:0}
+.cl-carte b{display:block;font-size:14.5px}
+.cl-carte small{display:block;font-size:12.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cl-carte .l3{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.cl-tete{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.cl-tete>.btn{align-self:flex-start}
+.cl-id{display:flex;gap:16px;align-items:center}
+.cl-id .grow{flex:1;min-width:0}
+.cl-id h2{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.cl-id p{color:var(--ink-2);font-size:13.5px}
+.cl-id .l3{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.cl-onglets{margin-bottom:16px;overflow-x:auto;scrollbar-width:none}
+.cl-onglets button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.cl-onglets .ph-duotone{font-size:16px}
+.tiroir.large{width:min(780px,100vw)}
+.doc-lignes{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.doc-l{display:grid;grid-template-columns:minmax(0,1fr) 70px 130px 110px 32px;gap:8px;align-items:start;padding:8px 10px;border-top:1px solid var(--line)}
+.doc-l:first-child{border-top:none}
+.doc-l-h{background:var(--surface-2);font-size:12px;font-weight:600;color:var(--ink-3);padding:8px 10px}
+.doc-l textarea{min-height:38px;resize:vertical;padding:8px 10px}
+.doc-l input{padding:8px 10px}
+.doc-l b,.doc-l .n{text-align:right;font-variant-numeric:tabular-nums;padding-top:9px}
+.doc-totaux{margin:16px 0 0 auto;max-width:360px;display:flex;flex-direction:column;gap:4px}
+.doc-totaux div{display:flex;justify-content:space-between;gap:16px;font-size:13.5px;color:var(--ink-2)}
+.doc-totaux b{color:var(--ink);font-variant-numeric:tabular-nums}
+.doc-totaux .fort{font-size:15.5px;color:var(--ink);border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+.doc-statut{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 12px;font-size:13px;color:var(--ink-2)}
+.doc-apercu{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:6px 0 16px;margin-bottom:12px}
+.doc-apercu .doc-totaux{padding:0 18px}
+.doc-apercu>p{padding:0 18px}
+
+/* =====================================================================
+   Calendrier éditorial
+===================================================================== */
+.cal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-1)}
+.cal-h{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.cal-h div{padding:8px;font-size:12px;font-weight:600;color:var(--ink-3);text-align:center}
+.cal-b{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cal-j{min-height:118px;border-left:1px solid var(--line);border-top:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.cal-j:nth-child(7n+1){border-left:none}
+.cal-j:nth-child(-n+7){border-top:none}
+.cal-j.hors{background:var(--surface-2)}
+.cal-j.hors .cal-n span{color:var(--ink-3)}
+.cal-n{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;font-weight:600}
+.cal-n span{width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%}
+.cal-j.auj .cal-n span{background:var(--accent);color:#fff}
+.cal-n .icobtn{width:24px;height:24px;opacity:0;transition:opacity .15s}
+.cal-j:hover .cal-n .icobtn,.cal-n .icobtn:focus{opacity:1}
+.cal-l{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cal-p{display:flex;align-items:center;gap:5px;width:100%;min-width:0;text-align:left;font-size:11.5px;font-weight:600;padding:3px 6px;border-radius:6px;background:var(--surface-3);color:var(--ink-2);border-left:3px solid var(--line-2)}
+.cal-p span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cal-p .ph-duotone{font-size:13px}
+.cal-p.creation{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)}
+.cal-p.a_valider{background:var(--warn-soft);color:var(--ink);border-left-color:var(--warn)}
+.cal-p.valide{background:var(--ok-soft);color:var(--ink);border-left-color:var(--ok)}
+.cal-p.publie{background:transparent;color:var(--ink-3);border-left-color:var(--line-2)}
+.cal-p.idee{background:transparent;border:1px dashed var(--line-2);border-left:3px solid var(--line-2)}
+.cal-p.modif{background:var(--bad-soft);color:var(--bad);border-left-color:var(--bad)}
+.cal-pastille{width:10px!important;height:10px!important;border-radius:3px!important;background:var(--surface-3);border:1px solid var(--line-2)}
+.cal-pastille.creation{background:var(--accent)}.cal-pastille.a_valider{background:var(--warn)}.cal-pastille.valide{background:var(--ok)}.cal-pastille.idee{background:transparent;border-style:dashed}
+.cal-jour-t{font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;padding:14px 18px 6px;border-top:1px solid var(--line)}
+.cal-jour-t:first-child{border-top:none}
+.pl-etapes{flex-wrap:wrap}
+.pl-com{background:var(--surface-2);border-radius:12px;padding:9px 12px;margin-bottom:8px;font-size:13px}
+.pl-com.client{background:var(--warn-soft)}
+.pl-com b{font-size:11.5px;color:var(--ink-3);font-weight:600}
+.pl-com p{white-space:pre-wrap;margin-top:2px}
+.rp-c{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 32px;gap:8px;margin-bottom:8px}
+.av.lea{background:var(--g-lea)}
+
+/* =====================================================================
    Tailles d'écran
 ===================================================================== */
 @media (max-width:1180px){
   .g-12,.g2{grid-template-columns:minmax(0,1fr)}
-  .equipe-strip{grid-template-columns:minmax(0,1fr)}
+  .equipe-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .chat{grid-template-columns:280px minmax(0,1fr)}
   .inbox{grid-template-columns:320px minmax(0,1fr)}
 }
@@ -692,6 +838,17 @@ button.tuile:hover{border-color:var(--accent-line)}
   .note-ajout-l{flex-wrap:wrap}.note-ajout-l input[data-k=client]{flex:1 1 100%}.note-ajout-l .btn{flex:1}
   .compose{padding:8px 10px 10px}
   .sem-heures div{font-size:10px;padding:0 4px}
+  .equipe-strip{grid-template-columns:minmax(0,1fr)}
+  .cl-grille{grid-template-columns:minmax(0,1fr)}
+  .cl-id h2{font-size:20px}
+  .cl-onglets button span{display:none}
+  .doc-l{grid-template-columns:minmax(0,1fr) 64px 32px;grid-template-areas:"d d x" "q p p"}
+  .doc-l textarea{grid-area:d}.doc-l [data-c=quantite]{grid-area:q}.doc-l [data-c=prixUnitaire]{grid-area:p}.doc-l>.icobtn{grid-area:x}.doc-l b{display:none}
+  .doc-l-h{display:none}
+  .cal-j{min-height:72px;padding:3px}
+  .cal-p{padding:2px 3px;font-size:10.5px}.cal-p span{display:none}.cal-p .ph-duotone{font-size:14px}
+  .cal-l{flex-direction:row;flex-wrap:wrap}.cal-p{width:auto}
+  .rp-c{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 32px}.rp-c [data-c=evolution]{grid-column:1/3}
 }
 @media print{.sb,.tb,.mnav{display:none}.main{margin:0}}
 </style>
@@ -704,10 +861,16 @@ button.tuile:hover{border-color:var(--accent-line)}
     <div class="login-av"><div></div></div>
     <h1>Bon retour, Paule</h1>
     <p>Votre espace pro : messages, équipe IA, prospects, agenda et audience.</p>
-    <label for="pw">Mot de passe</label>
+    <label for="pw" id="pwLabel">Mot de passe</label>
     <input id="pw" type="password" autocomplete="current-password" placeholder="Votre mot de passe">
+    <div id="codeBox" hidden>
+      <label for="code2fa">Code de votre application</label>
+      <input id="code2fa" inputmode="numeric" autocomplete="one-time-code" placeholder="123 456" maxlength="11" spellcheck="false" autocapitalize="off">
+      <p class="login-aide">Le code à 6 chiffres de Google Authenticator (ou de votre application de codes). Téléphone perdu ? Saisissez un de vos codes de secours.</p>
+    </div>
     <div class="err" id="loginErr" role="alert"></div>
     <button class="btn primary lg" id="loginBtn">Se connecter</button>
+    <button class="login-retour" id="loginRetour" type="button" hidden>← Revenir au mot de passe</button>
     <a class="login-site" href="/">Retour au site</a>
   </div>
 </div>
@@ -766,7 +929,7 @@ function api(path, opts) {
     opts.body = JSON.stringify(opts.body);
   }
   return fetch(path, opts).then(function (r) {
-    if (r.status === 401 && path !== "/api/auth/login") { logout(); throw new Error("Session expirée — reconnectez-vous"); }
+    if (r.status === 401 && path.indexOf("/api/auth/login") !== 0) { logout(); throw new Error("Session expirée — reconnectez-vous"); }
     return r.json().catch(function () { return {}; }).then(function (d) {
       if (!r.ok) throw new Error(d.erreur || "Erreur " + r.status);
       return d;
@@ -854,15 +1017,50 @@ function logout() {
 }
 $("#loginBtn").addEventListener("click", doLogin);
 $("#pw").addEventListener("keydown", function (e) { if (e.key === "Enter") doLogin(); });
+$("#code2fa").addEventListener("keydown", function (e) { if (e.key === "Enter") doLogin(); });
+$("#loginRetour").addEventListener("click", function () { $("#loginErr").textContent = ""; etapeCode(false); });
+/* Double authentification : après le mot de passe, un ticket de 5 minutes pour saisir le code */
+var TICKET_2FA = "";
+function etapeCode(oui) {
+  $("#codeBox").hidden = !oui;
+  $("#pw").hidden = oui; $("#pwLabel").hidden = oui;
+  $("#loginRetour").hidden = !oui;
+  $("#loginBtn").textContent = oui ? "Valider le code" : "Se connecter";
+  if (oui) setTimeout(function () { $("#code2fa").focus(); }, 30);
+  else { TICKET_2FA = ""; $("#code2fa").value = ""; setTimeout(function () { $("#pw").focus(); }, 30); }
+}
+function connecte(d) {
+  TOKEN = d.token; localStorage.setItem("paule_token", TOKEN);
+  $("#pw").value = "";
+  if (TICKET_2FA) etapeCode(false);
+  enter();
+  if (d.secoursRestants != null) setTimeout(function () {
+    if (window.ADM) ADM.toast("Code de secours utilisé : il vous en reste " + d.secoursRestants + ". Créez-en de nouveaux dans Réglages.", d.secoursRestants < 3 ? "ko" : "");
+  }, 900);
+}
 function doLogin() {
   $("#loginErr").textContent = "";
+  var btn = $("#loginBtn");
+  btn.disabled = true;
+  var fin = function () { btn.disabled = false; };
+  if (TICKET_2FA) {
+    api("/api/auth/login/code", { method: "POST", body: { ticket: TICKET_2FA, code: $("#code2fa").value } })
+      .then(function (d) { fin(); connecte(d); })
+      .catch(function (e) {
+        fin();
+        if (/Délai dépassé/.test(e.message)) etapeCode(false);
+        $("#loginErr").textContent = e.message;
+        $("#code2fa").select();
+      });
+    return;
+  }
   api("/api/auth/login", { method: "POST", body: { password: $("#pw").value } })
     .then(function (d) {
-      TOKEN = d.token; localStorage.setItem("paule_token", TOKEN);
-      $("#pw").value = "";
-      enter();
+      fin();
+      if (d.deuxEtapes) { TICKET_2FA = d.ticket; $("#pw").value = ""; etapeCode(true); return; }
+      connecte(d);
     })
-    .catch(function (e) { $("#loginErr").textContent = e.message; });
+    .catch(function (e) { fin(); $("#loginErr").textContent = e.message; });
 }
 
 /* ================================================================
@@ -1349,9 +1547,12 @@ function dateCourte(iso) {
 }
 
 </script>
-<script src="/admin-app.js?v=2026-11-17a"></script>
-<script src="/admin-pieces.js?v=2026-11-17a"></script>
-<script src="/admin-vues.js?v=2026-11-17a"></script>
+<script src="/admin-app.js?v=2026-11-20b"></script>
+<script src="/admin-pieces.js?v=2026-11-20b"></script>
+<script src="/admin-vues.js?v=2026-11-20b"></script>
+<script src="/admin-clients.js?v=2026-11-20b"></script>
+<script src="/admin-travail.js?v=2026-11-20b"></script>
+<script src="/admin-outils.js?v=2026-11-20b"></script>
 <script src="/admin-audience.js?v=2026-11-13c"></script>
 </body>
 </html>
