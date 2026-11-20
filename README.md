@@ -67,22 +67,31 @@ retrouve tout de suite et peut écrire à Paule sans quitter la page.
 - Réservation d'un appel en quelques clics
 - Mode sombre, rapide sur téléphone, partage soigné sur les réseaux (aperçu Open Graph)
 
-**Côté Paule : un espace pro (`/admin`)**
+**Côté Paule : un espace pro (`/admin`), installable comme une application**
 - **Messages** : chaque demande avec le besoin, le budget, le délai et le suivi
 - **Prospects** : pipeline en colonnes, du premier contact au client signé
+- **Clients** : une fiche par client avec ses documents, son calendrier, ses bilans, son brief et ses coûts ; modèles de messages WhatsApp et email
+- **Calendrier éditorial** : les publications de chaque client, de l'idée à la mise en ligne, validées par le client depuis un simple lien
+- **Finances** : devis et factures en FCFA (PDF, acompte et solde, paiements Mobile Money ou virement), encaissé, à encaisser, retards et marge réelle par client
 - **Agenda** : disponibilités et rendez-vous pris depuis le site, ajoutés automatiquement à son Google Agenda avec les rappels
 - **Audience** : visites, sources, appareils, entonnoir de conversion, liens de suivi avec QR code. Statistiques anonymes, sans cookie et sans stocker d'IP.
-- **Mon site** : publications, vidéos, formules, avis clients et logo modifiables sans toucher au code
+- **Mon site** : publications, vidéos, formules, avis clients et logo modifiables sans toucher au code, et une page **Référencement** (bilan noté sur 100, aperçu Google, Search Console)
+- **Brief du matin** : chaque jour vers 7 h, un email avec sa journée ; **notifications** sur son téléphone pour chaque demande, rendez-vous ou retour client
 
-**Trois assistantes IA**, avec qui Paule discute comme avec des collègues :
+**Pour ses clients, des pages sans compte** (lien unique) : valider les publications, remplir le brief de démarrage, laisser un avis, accepter un devis, lire le bilan du mois.
+
+**Quatre assistantes IA**, avec qui Paule discute comme avec des collègues :
 
 | Assistante | Rôle | Modèle |
 |---|---|---|
 | **Nadia** | Analyse chaque demande et prépare la réponse par email ou WhatsApp | OpenAI (léger) |
 | **Yann** | Cherche des entreprises sur le web et audite leur présence en ligne pour trouver de nouveaux clients | Claude (Haiku) |
-| **Awa** | Bras droit : agenda et relances, conseil sur les prix, les marges et les attentes des clients, bloc-notes des tâches | OpenAI (léger) |
+| **Léa** | Légendes, scripts de vidéos, idées de publications et bilans du mois des clients | OpenAI (léger) |
+| **Awa** | Bras droit : agenda et relances, devis, conseil sur les prix, les marges et les attentes des clients, bloc-notes des tâches | OpenAI (léger) |
 
 Paule peut aussi les réunir en **débrief d'équipe** sur un client : chacune donne son avis, puis Awa fait la synthèse et note les tâches à faire.
+
+**Elles apprennent de Paule** : une mémoire d'équipe que toutes relisent, nourrie par ses corrections (pouce baissé sous une réponse) et par les leçons des affaires gagnées ou perdues. Les assistantes proposent, Paule valide. Raccourcis de demandes, dictée vocale et suggestions de suite rendent les échanges plus rapides.
 
 Elle leur joint des **captures d'écran et des documents** (PDF, Word, Excel, PowerPoint) : Yann audite par exemple un compte TikTok ou Facebook à partir des captures du profil, ces réseaux bloquant la lecture automatique.
 
@@ -92,8 +101,10 @@ Un budget d'un million de tokens par jour et par assistante garde la facture sou
 
 Node.js et Express, MongoDB Atlas, médias sur Cloudinary, hébergé sur Vercel.
 HTML, CSS et JavaScript sans framework côté site, pour un chargement rapide.
-Sécurité : mots de passe bcrypt, sessions JWT, limitation des tentatives de
-connexion, anti-spam sur la messagerie (honeypot, quotas en base, IP hachée).
+Sécurité : mots de passe bcrypt, double authentification (codes à 6 chiffres et
+codes de secours), sessions JWT, tentatives de connexion comptées en base,
+anti-spam sur la messagerie (honeypot, quotas en base, IP hachée), liens clients
+impossibles à deviner.
 
 Installation, variables d'environnement et déploiement : [docs/TECHNIQUE.md](docs/TECHNIQUE.md).
 
@@ -102,7 +113,7 @@ Installation, variables d'environnement et déploiement : [docs/TECHNIQUE.md](do
 <div align="center">
 
 **Vous voulez un site comme celui-ci pour votre activité ?**
-Un portfolio qui ressemble à vos réseaux, un espace pro pour suivre vos clients et des assistantes IA qui travaillent pour vous :
+Un portfolio qui ressemble à vos réseaux, un espace pro pour suivre vos clients et votre argent, et des assistantes IA qui travaillent pour vous :
 [contactez le développeur sur GitHub](https://github.com/yortze).
 
 </div>
