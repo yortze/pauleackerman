@@ -10,19 +10,33 @@ Installation, déploiement et fonctionnement interne du portfolio. La présentat
 - **Messages** : boîte de réception en deux panneaux ; pour chaque demande : besoin,
   budget, délai, suivi (étape, montant, relance, notes), analyse IA et brouillons
   de réponse email/WhatsApp
-- **Équipe IA** : trois assistantes avec qui Paule discute comme avec des contacts
+- **Équipe IA** : quatre assistantes avec qui Paule discute comme avec des contacts
   (conversations enregistrées) :
   - **Nadia** (relation client, OpenAI) — analyse les demandes, prépare les réponses
   - **Yann** (prospection, Claude) — cherche des clients sur le web, audite leur présence en ligne
-  - **Awa** (bras droit, OpenAI) — rendez-vous, relances, suivi des contacts, et conseil : prix et marges
-    à prendre, attentes de chaque client, grands points à retenir ; elle note les tâches dans le bloc-notes
-  - **Débriefs d’équipe** : Paule réunit les trois sur un sujet ou un client ; Nadia et Yann répondent, puis
-    Awa fait la synthèse (grands points, à faire). « @Nadia », « @Yann » ou « @Awa » : seule la personne citée répond
+  - **Léa** (contenu et bilans, OpenAI) — légendes, scripts, idées de publications ajoutées au
+    calendrier (toujours au stade « idée »), bilans du mois rédigés à partir des captures de statistiques
+  - **Awa** (bras droit, OpenAI) — rendez-vous, relances, suivi des contacts, devis en brouillon, état
+    des finances, et conseil : prix et marges, attentes de chaque client ; elle note les tâches dans le bloc-notes
+  - **Débriefs d’équipe** : Paule réunit l’équipe sur un sujet ou un client ; chacune répond, puis
+    Awa fait la synthèse (grands points, à faire). « @Nadia », « @Yann », « @Léa » ou « @Awa » : seule la personne citée répond
+  - **Mémoire de l’équipe** : notes que toutes relisent à chaque échange (6 000 caractères, épinglées
+    en premier). Les assistantes **proposent** (« retiens que… », leçons d’une affaire gagnée ou perdue) ;
+    rien n’est retenu sans l’accord de Paule. Ses corrections (pouce baissé sous une réponse) entrent directement
+  - **Raccourcis** (bouton éclair), **dictée vocale** (micro, Chrome et Safari) et **suites proposées**
+    sous chaque réponse
   - **Bloc-notes** : tâches à faire (client, échéance), cochées par Paule ou par Awa
   - **Pièces jointes** : captures d’écran et documents (PDF, Word, Excel, PowerPoint, CSV, texte), joints
     avec le trombone, collés ou glissés dans une discussion ou un débrief. Indispensables pour TikTok,
     Facebook, Instagram et LinkedIn, qui bloquent la lecture web de Yann (voir Notes techniques)
 - **Prospects** : pipeline en colonnes (glisser-déposer), fiche détaillée, audit, message d'approche
+- **Clients** : fiche par client (aperçu, documents, calendrier, bilans, brief, coûts), créée à partir
+  d’une demande ou d’un prospect gagné ; liens à partager, modèles de messages (variables et liens remplis)
+- **Calendrier** : planning éditorial par client (idée → création → à valider → validé → publié),
+  commentaires, retouches demandées par les clients
+- **Finances** : devis et factures numérotés (D-2026-001, F-2026-001), acompte et solde, paiements,
+  facturation du mois des abonnements, encaissé et coûts par mois, retards, marge par client,
+  coordonnées de facturation (NIF, RCCM, mentions)
 - **Agenda** : vue semaine, disponibilités, réservation d'appel depuis le site. Chaque rendez-vous
   peut s'ajouter tout seul à son Google Agenda, avec ses notifications (voir plus bas)
 - **Audience** : visites, sources, appareils, pays, heures de visite, contenus vus,
@@ -30,10 +44,17 @@ Installation, déploiement et fonctionnement interne du portfolio. La présentat
   anonymes : ni cookie, ni IP)
 
 **Mon site** : publications (avec leur vraie date), créations, vidéos, études de cas,
-registre, formules, avis clients, profil, à propos.
+registre, formules, avis clients, profil, à propos, et **Référencement** : bilan noté sur 100
+(textes, profil, contenu, présence sur Google), aperçu du résultat Google, titre, description
+et mots-clés visés, validation Google Search Console, lien de la fiche Google.
 
-**Réglages** : mot de passe, thème, exclusion de ses propres visites, Google Agenda, état des alertes
-email et de l'équipe IA.
+**Réglages** : identité de marque, mot de passe, **double authentification**, thème, exclusion de
+ses propres visites, Google Agenda, **brief du matin**, **notifications et application**,
+**sauvegarde des données** (export JSON), état des alertes email et de l'équipe IA.
+
+**Pages des clients** (`/lien/<jeton>`, sans compte) : valider les publications ou demander une
+retouche, remplir le brief de démarrage, laisser un avis (publié seulement après accord de Paule),
+lire et accepter un devis, lire une facture ou le bilan du mois (impression en PDF par le navigateur).
 
 Les images/vidéos importées depuis l'admin partent sur **Cloudinary** (photo 10 Mo,
 vidéo 100 Mo). Le fichier va directement du navigateur de Paule vers Cloudinary :
@@ -78,18 +99,19 @@ Mot de passe admin par défaut : `paule-admin` (à changer dès la première con
    | `CLOUDINARY_API_KEY` | *API key* du dashboard Cloudinary |
    | `CLOUDINARY_API_SECRET` | *API secret* du dashboard Cloudinary |
    | `ANTHROPIC_API_KEY` | clé Claude (console.anthropic.com) — active Yann, la prospection |
-   | `OPENAI_API_KEY` | clé OpenAI (platform.openai.com) — active Nadia et Awa |
-   | `RESEND_API_KEY` + `NOTIFY_EMAIL` | facultatif — email à Paule à chaque demande et rendez-vous |
+   | `OPENAI_API_KEY` | clé OpenAI (platform.openai.com) — active Nadia, Léa et Awa |
+   | `RESEND_API_KEY` + `NOTIFY_EMAIL` | facultatif — email à Paule à chaque demande et rendez-vous, et brief du matin |
+   | `CRON_SECRET` | recommandé — protège le déclenchement quotidien du brief du matin |
    | `GOOGLE_CALENDAR_ID` + `GOOGLE_SERVICE_ACCOUNT` | facultatif — rendez-vous ajoutés à son Google Agenda (voir plus bas) |
 
    Sans clé, l'assistante concernée affiche simplement « clé manquante ». Garde-fou :
    1 million de tokens par jour et par assistante (`AI_DAILY_TOKENS`) ; une tâche
    en cours s'arrête si le budget est atteint. Modèles : Yann (recherche web, captures,
    PDF) sur `claude-haiku-5-5`, 20 fois moins cher que `claude-sonnet-5-5`, qui fouille
-   davantage (`CLAUDE_MODEL`) ; Nadia et Awa, aux tâches simples, sur le modèle léger
-   `gpt-5.4-mini` avec peu de réflexion (`OPENAI_MODEL_DIAGNOSTIC`, `OPENAI_MODEL_AGENDA`,
-   `OPENAI_REASONING_EFFORT`). Claude relit le début des conversations depuis son cache
-   (10 % du prix).
+   davantage (`CLAUDE_MODEL`) ; Nadia, Léa et Awa, aux tâches simples, sur le modèle léger
+   `gpt-5.4-mini` avec peu de réflexion (`OPENAI_MODEL_DIAGNOSTIC`, `OPENAI_MODEL_CONTENU`,
+   `OPENAI_MODEL_AGENDA`, `OPENAI_REASONING_EFFORT`). Claude relit le début des conversations
+   depuis son cache (10 % du prix).
 
    Les trois clés Cloudinary se trouvent sur le dashboard, encadré *Product
    Environment Credentials*. On peut aussi coller la seule variable
@@ -134,6 +156,60 @@ stocké, et renvoyer un rendez-vous ne crée jamais de doublon. Une erreur de Go
 bloque jamais une réservation ; elle s'affiche dans Réglages avec la marche à suivre.
 `/api/health` indique `googleAgenda: true` quand les deux variables sont présentes.
 
+## Brief du matin
+
+`vercel.json` déclare une tâche planifiée (`crons`) qui appelle `GET /api/cron/brief` chaque
+jour à 6 h UTC (7 h à Libreville ; sur le plan Hobby, Vercel la lance dans l'heure). Le
+serveur compose la journée (rendez-vous, publications du jour, retouches, relances, demandes
+non lues, factures en retard ou dues, renouvellements de la semaine, avis et leçons à valider)
+et l'envoie par email (Resend) et en notification sur les appareils abonnés.
+
+- Avec `CRON_SECRET`, Vercel envoie `Authorization: Bearer <CRON_SECRET>` et rien d'autre
+  n'est accepté. Sans secret, seul l'agent `vercel-cron/…` est accepté.
+- Un seul brief par jour (verrou en base, posé avant l'envoi). Les jours calmes, rien ne part,
+  sauf si Paule coche « Le recevoir aussi les jours calmes ».
+- *Réglages → Brief du matin* : activer ou arrêter, aperçu, envoi de test.
+
+## Notifications et application installable
+
+L'espace pro a un manifeste (`/api/manifest-admin`, icônes `client/media/app-*.png` ou le logo
+de Paule s'il est sur Cloudinary) et un service worker (`client/admin-sw.js`, portée `/admin`)
+qui affiche les notifications et une page « hors ligne ». Il ne met rien en cache.
+
+- Notifications **Web Push** (bibliothèque `web-push`) : nouvelle demande, rendez-vous réservé,
+  validation ou retouche d'un client, brief rempli, avis reçu, devis accepté, brief du matin.
+  Paule les active par appareil et choisit les types dans *Réglages → Notifications et application*.
+- Clés VAPID : créées au premier usage et gardées en base (`settings.push_vapid`, jamais exportées),
+  ou fixées par `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (`npx web-push generate-vapid-keys`).
+  Les changer oblige à réactiver les notifications sur chaque appareil.
+- Seuls les services de notification des navigateurs (Google, Mozilla, Apple, Microsoft) sont
+  acceptés comme destination. Un appareil désabonné (404/410) est retiré tout seul.
+- Sur iPhone (iOS 16.4 ou plus) : il faut d'abord ajouter l'espace pro à l'écran d'accueil
+  depuis Safari, puis l'ouvrir depuis son icône pour activer les notifications.
+
+## Double authentification
+
+TOTP (RFC 6238, codes à 6 chiffres de Google Authenticator, Microsoft Authenticator, 2FAS…),
+sans dépendance (`server/src/totp.js`). Activation dans *Réglages* : QR code, saisie d'un code,
+puis 8 codes de secours à usage unique (affichés une seule fois, stockés en empreinte HMAC).
+
+- Le secret est chiffré en base (AES-256-GCM, clé dérivée de `JWT_SECRET`). Changer
+  `JWT_SECRET` rend le secret illisible : il faut alors désactiver puis réactiver.
+- Connexion : mot de passe → ticket de 5 minutes (il n'ouvre aucune route de l'admin) → code.
+  Un code déjà utilisé est refusé (pas de rejeu).
+- **Secours** (téléphone et codes perdus) : ajouter `ADMIN_2FA_OFF=1` dans Vercel et redéployer ;
+  la connexion ne demande plus de code. Se reconnecter, désactiver ou réactiver la double
+  authentification, puis retirer la variable.
+
+## Référencement
+
+Le titre et la description réglés dans *Mon site → Référencement* sont appliqués par la page
+(`app.js`, via `/api/all`) : Google lit la page affichée. Les données structurées (JSON-LD)
+reprennent le téléphone, l'email et les réseaux du profil. L'aperçu de partage (Open Graph,
+WhatsApp, Facebook) reste celui écrit dans `client/index.html`, car ces robots ne lancent pas
+le JavaScript. La validation Search Console utilise la méthode « fichier HTML » : le fichier
+`/google<code>.html` est servi par l'API (réécriture dans `vercel.json`).
+
 ## Notes techniques
 
 - Sans `MONGODB_URI`, le serveur retombe sur un stockage JSON local — parfait en
@@ -144,8 +220,18 @@ bloque jamais une réservation ; elle s'affiche dans Réglages avec la marche à
   `/api/media/:id` (support des Range requests pour les vidéos sur iOS/Safari).
   Les anciens liens `/api/media/:id` restent valides : ils redirigent vers le CDN.
 - Supprimer un média depuis la médiathèque le supprime aussi sur Cloudinary.
-- Connexion admin : JWT 12 h, anti-bruteforce (5 essais / 10 min / IP), mot de passe
-  hashé bcrypt.
+- Connexion admin : JWT 12 h, mot de passe hashé bcrypt, double authentification facultative.
+  Anti-bruteforce compté **en base** (collection `tentatives`) : 5 échecs en 10 min par IP ;
+  au-delà de 60 échecs en une heure sur tout le site, une IP qui s'est déjà trompée attend.
+- Liens des clients (`server/src/routes/liens.js`) : jeton aléatoire de 144 bits par lien,
+  régénérable depuis la fiche client. Pages `noindex`, sans cache ni referrer. Envois limités
+  par jour et par IP (empreinte HMAC), champ piège anti-robot. Un avis n'est publié qu'après
+  accord de Paule ; un devis accepté en ligne garde le nom saisi et la date.
+- Mémoire de l'équipe (`server/src/ai/memoire.js`) : une proposition d'assistante reste
+  « à valider » tant que Paule ne l'a pas retenue (protection contre une consigne glissée
+  dans une demande ou une page web). « Non » sur une proposition déjà retenue est refusé.
+- Sauvegarde (`GET /api/crm/export`) : toutes les collections utiles en JSON compressé, sans
+  mot de passe, double authentification, clés privées, fichiers joints ni jetons des liens clients.
 - Boîte DM du site : honeypot, délai minimum de saisie, 20 s entre deux envois,
   5 messages / jour / IP et 80 / jour au total. Les compteurs sont **en base**
   (un compteur en mémoire ne protège de rien en serverless), et la clé est une
